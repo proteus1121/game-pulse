@@ -5,7 +5,7 @@ window.GAME_PULSE = {
   // Google Cloud console > APIs & Services > Credentials > OAuth client ID
   // (Web application). Authorized JavaScript origins must list the
   // GitHub Pages origin, e.g. https://<login>.github.io
-  clientId: 'PASTE_CLIENT_ID.apps.googleusercontent.com',
+  clientId: '380825317265-tiffv9an6h027f8mionv4c1hsh0kuusn.apps.googleusercontent.com',
 
   // Developer's own devices.
   excludeCountries: ['Ukraine'],

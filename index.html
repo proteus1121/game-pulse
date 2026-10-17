@@ -130,7 +130,7 @@ td.reason { white-space: normal; word-break: break-all; font-family: var(--mono)
     <h1>Game Pulse</h1>
     <nav class="tabs" id="tabs" aria-label="Проекты"></nav>
     <div class="status">
-      <span id="status"><span class="dot stale"></span>загрузка…</span>
+      <span id="status" hidden><span class="dot stale"></span>загрузка…</span>
       <button class="ghost" id="refresh" type="button" hidden>Обновить</button>
       <button class="ghost" id="signout" type="button" hidden>Выйти</button>
     </div>
@@ -447,7 +447,7 @@ let started = false;
 // Runs once a Google token is in hand: list properties and start polling.
 async function start() {
   $('signin').hidden = true; $('expired').hidden = true;
-  $('app').hidden = false; $('refresh').hidden = false; $('signout').hidden = false;
+  $('app').hidden = false; $('status').hidden = false; $('refresh').hidden = false; $('signout').hidden = false;
   try {
     props = await GA4.properties();
     if (!props.length) { lastError = 'у этого Google-аккаунта нет доступа ни к одному GA4-ресурсу'; setStatus(); return; }
