@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Pulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one control-room column - live strip on top, period switcher + tiles, then charts and tables in a wrapping grid. */
+:root {
+  --bg: #0f1216;
+  --panel: #161b21;
+  --line: #252c35;
+  --fg: #e3e8ee;
+  --muted: #8693a3;
+  --accent: #4fb3ff;
+  --accent-soft: rgba(79, 179, 255, .22);
+  --good: #3ccf8e;
+  --bad: #ff6b6b;
+  --warn: #f2b84b;
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", Consolas, ui-monospace, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f5f8; --panel: #ffffff; --line: #dde2e9; --fg: #18202a; --muted: #5d6b7c;
+    --accent: #1673c9; --accent-soft: rgba(22, 115, 201, .16);
+    --good: #138a55; --bad: #cf3434; --warn: #a86b00; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f5f8; --panel: #ffffff; --line: #dde2e9; --fg: #18202a; --muted: #5d6b7c;
+  --accent: #1673c9; --accent-soft: rgba(22, 115, 201, .16);
+  --good: #138a55; --bad: #cf3434; --warn: #a86b00; color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+main { display: contents; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--sans);
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+h1 { font-size: 18px; margin: 0; font-weight: 600; letter-spacing: .01em; }
+h2 { font-size: 12px; margin: 0 0 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button {
+  font: 500 13px var(--sans); color: var(--muted); background: transparent;
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer;
+}
+.tabs button[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); background: var(--accent-soft); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.status { margin-left: auto; color: var(--muted); font: 12px var(--mono); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); display: inline-block; margin-right: 6px; }
+.dot.stale { background: var(--warn); }
+.dot.err { background: var(--bad); }
+.ghost { font: 12px var(--mono); color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.live { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 20px; align-items: end; }
+.big { font: 600 56px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.big small { display: block; font: 12px var(--sans); color: var(--muted); margin-top: 8px; }
+.sechead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 12px; }
+.sechead h2 { margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--panel); }
+.seg button {
+  font: 500 13px var(--sans); color: var(--muted); background: transparent; border: 0;
+  border-radius: 6px; padding: 5px 14px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { color: var(--fg); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 1100px) { .tiles { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tile .label { color: var(--muted); font-size: 12px; }
+.tile .val { font: 600 26px/1.15 var(--mono); font-variant-numeric: tabular-nums; }
+.tile .sub { font: 12px var(--mono); color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.loading .tile .val, .loading .chart { opacity: .45; transition: opacity .2s; }
+.pill { font: 600 11px var(--mono); padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; }
+.pill.up { color: var(--good); } .pill.down { color: var(--bad); } .pill.flat { color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+.wide { grid-column: 1 / -1; }
+svg { display: block; width: 100%; height: auto; }
+svg text { fill: var(--muted); font: 10px var(--mono); }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 8px; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 6px; background: var(--accent); }
+.legend i.y { background: var(--muted); }
+.legend i.n { background: var(--good); height: 8px; }
+.tbl { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; }
+td.n, th.n { text-align: right; font-family: var(--mono); }
+td.reason { white-space: normal; word-break: break-all; font-family: var(--mono); font-size: 12px; }
+.bar { height: 6px; background: var(--accent-soft); border-radius: 3px; position: relative; min-width: 40px; }
+.bar span { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; }
+.empty, .err { color: var(--muted); font-size: 13px; padding: 8px 0; }
+.err { color: var(--bad); font-family: var(--mono); font-size: 12px; word-break: break-word; }
+.note { color: var(--muted); font-size: 12px; }
+.signin { max-width: 460px; margin: 12vh auto 0; display: flex; flex-direction: column; gap: 14px; }
+.signin h2 { font-size: 22px; text-transform: none; letter-spacing: 0; color: var(--fg); margin: 0; }
+.signin p { margin: 0; color: var(--muted); }
+.primary {
+  font: 600 14px var(--sans); color: #fff; background: var(--accent); border: 0; border-radius: 8px;
+  padding: 10px 18px; cursor: pointer; align-self: flex-start;
+}
+.banner {
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between;
+  border: 1px solid var(--warn); border-radius: 10px; padding: 10px 14px; color: var(--fg);
+}
+.banner .primary { padding: 6px 14px; font-size: 13px; }
+@media (max-width: 640px) {
+  .live { grid-template-columns: 1fr; }
+  .big { font-size: 44px; }
+  .status { margin-left: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dot.live-pulse { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Game Pulse</h1>
+    <nav class="tabs" id="tabs" aria-label="Проекты"></nav>
+    <div class="status">
+      <span id="status"><span class="dot stale"></span>загрузка…</span>
+      <button class="ghost" id="refresh" type="button" hidden>Обновить</button>
+      <button class="ghost" id="signout" type="button" hidden>Выйти</button>
+    </div>
+  </header>
+
+  <section class="panel signin" id="signin">
+    <h2>Вход</h2>
+    <p>Дашборд читает Google Analytics от имени твоего Google-аккаунта, только на чтение. Видны все GA4-ресурсы, к которым у аккаунта есть доступ.</p>
+    <button class="primary" id="signinBtn" type="button">Войти через Google</button>
+    <p class="err" id="signinErr" hidden></p>
+  </section>
+
+  <div class="banner" id="expired" hidden>
+    <span>Сессия Google закончилась, данные не обновляются.</span>
+    <button class="primary" id="reloginBtn" type="button">Войти снова</button>
+  </div>
+
+  <main id="app" hidden>
+  <section class="panel live">
+    <div>
+      <h2>Сейчас в игре</h2>
+      <div class="big" id="rtTotal">–<small>активных за последние 30 минут</small></div>
+    </div>
+    <div>
+      <div class="legend"><span>Активные пользователи по минутам, слева 30 мин назад, справа сейчас</span></div>
+      <div id="rtMinutes"></div>
+    </div>
+  </section>
+
+  <section id="periodSection">
+    <div class="sechead">
+      <h2 id="periodTitle">Сегодня</h2>
+      <div class="seg" id="periods" role="group" aria-label="Период"></div>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <p class="note" id="filterNote"></p>
+  </section>
+
+  <section class="grid" id="charts">
+    <div class="panel wide" id="hoursPanel">
+      <h2>По часам</h2>
+      <div class="legend"><span><i></i><span id="hoursCur">сегодня</span></span><span><i class="y"></i><span id="hoursPrev">вчера</span></span></div>
+      <div class="chart" id="hours"></div>
+    </div>
+    <div class="panel wide">
+      <h2 id="daysTitle">По дням</h2>
+      <div class="legend"><span><i></i>активные</span><span><i class="n"></i>новые</span><span id="daysHint"></span></div>
+      <div class="chart" id="days"></div>
+    </div>
+    <div class="panel"><h2>События, 30 мин</h2><div class="tbl" id="rtEvents"></div></div>
+    <div class="panel"><h2>Страны, 30 мин</h2><div class="tbl" id="rtCountries"></div></div>
+    <div class="panel"><h2>Ключевые события</h2><div class="tbl" id="events"></div></div>
+    <div class="panel"><h2 id="reasonsTitle">Причины ошибок</h2><div class="tbl" id="reasons"></div></div>
+    <div class="panel"><h2 id="versionsTitle">Версии</h2><div class="tbl" id="versions"></div></div>
+    <div class="panel"><h2 id="countriesTitle">Страны</h2><div class="tbl" id="countries"></div></div>
+  </section>
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script src="ga4.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script>
+const RT_EVERY = 60e3, REPORTS_EVERY = 300e3;
+// Events where growth is bad news - their delta pill flips colour.
+const BAD_EVENTS = new Set(['app_remove', 'purchase_failed', 'level_failed']);
+const PERIODS = {
+  today:     {btn: 'Сегодня', title: 'Сегодня', cur: 'сегодня', prev: 'вчера', col: 'Вчера', where: 'сегодня'},
+  yesterday: {btn: 'Вчера', title: 'Вчера', cur: 'вчера', prev: 'позавчера', col: 'Позавч.', where: 'вчера'},
+  week:      {btn: 'Неделя', title: 'Последние 7 дней', cur: '7 дней', prev: 'пред. 7 дней', col: 'Пред.', where: 'за 7 дней'},
+  month:     {btn: 'Месяц', title: 'Последние 30 дней', cur: '30 дней', prev: 'пред. 30 дней', col: 'Пред.', where: 'за 30 дней'},
+};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const num = v => Number(v) || 0;
+const fmt = v => num(v).toLocaleString('ru-RU', {maximumFractionDigits: 1});
+const dur = s => { s = Math.round(num(s)); return s >= 60 ? Math.floor(s / 60) + 'м ' + String(s % 60).padStart(2, '0') + 'с' : s + 'с'; };
+
+let props = [], current = null, period = 'today', lastRt = 0, lastError = '';
+
+function store(k, v) { try { if (v !== undefined) localStorage.setItem(k, v); return localStorage.getItem(k); } catch { return null; } }
+
+// Every loader funnels failures through here: an expired Google session
+// shows the "sign in again" banner instead of a red status line.
+function fail(e) {
+  if (e instanceof GA4.NeedLogin) { $('expired').hidden = false; lastError = ''; }
+  else lastError = e.message;
+  setStatus();
+}
+
+function setStatus() {
+  const age = lastRt ? Math.round((Date.now() - lastRt) / 1000) : null;
+  const cls = lastError ? 'err' : (age !== null && age < 120 ? 'live-pulse' : 'stale');
+  const t = lastRt ? new Date(lastRt).toLocaleTimeString('ru-RU') : '–';
+  $('status').innerHTML = `<span class="dot ${cls}"></span>` +
+    (lastError ? 'ошибка: ' + esc(lastError) : `обновлено ${t} · live каждые 60 с, отчёты каждые 5 мин`);
+}
+
+function renderTabs() {
+  $('tabs').innerHTML = props.map(p =>
+    `<button type="button" data-id="${esc(p.id)}" aria-pressed="${p.id === current}" title="${esc(p.account)} · ${esc(p.id)}">${esc(p.name)}</button>`).join('');
+  $('tabs').querySelectorAll('button').forEach(b => b.onclick = () => select(b.dataset.id));
+}
+
+function renderPeriods() {
+  $('periods').innerHTML = Object.entries(PERIODS).map(([k, p]) =>
+    `<button type="button" data-p="${k}" aria-pressed="${k === period}">${p.btn}</button>`).join('');
+  $('periods').querySelectorAll('button').forEach(b => b.onclick = () => setPeriod(b.dataset.p));
+  const P = PERIODS[period];
+  $('periodTitle').textContent = P.title;
+  $('reasonsTitle').textContent = 'Причины ошибок ' + P.where;
+  $('versionsTitle').textContent = 'Версии ' + P.where;
+  $('countriesTitle').textContent = 'Страны ' + P.where;
+  $('hoursPanel').hidden = !(period === 'today' || period === 'yesterday');
+  $('hoursCur').textContent = P.cur;
+  $('hoursPrev').textContent = P.prev;
+}
+
+function select(id) {
+  current = id; store('gp.property', id); renderTabs();
+  loadRealtime(); loadReports();
+}
+
+function setPeriod(p) {
+  if (!PERIODS[p] || p === period) return;
+  period = p; store('gp.period', p); renderPeriods(); loadReports();
+}
+
+// ---------------------------------------------------------------- charts
+
+function minutesChart(rows) {
+  const by = new Array(30).fill(0);
+  rows.forEach(r => { const m = num(r.minutesAgo); if (m < 30) by[m] = num(r.activeUsers); });
+  const W = 600, H = 90, max = Math.max(1, ...by), bw = W / 30;
+  let s = `<svg viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="Активные пользователи по минутам">`;
+  for (let i = 0; i < 30; i++) {
+    const v = by[29 - i], h = v ? Math.max(2, v / max * H) : 1;
+    s += `<rect x="${i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" rx="1.5" fill="${v ? 'var(--accent)' : 'var(--line)'}"><title>${29 - i} мин назад: ${v}</title></rect>`;
+  }
+  s += `<text x="0" y="${H + 13}">−30 мин</text><text x="${W}" y="${H + 13}" text-anchor="end">сейчас</text>`;
+  s += `<text x="${W}" y="10" text-anchor="end">макс ${max}</text></svg>`;
+  return s;
+}
+
+function hoursChart(rows, curDay, prevDay, lastHour) {
+  const t = new Array(24).fill(null), y = new Array(24).fill(0);
+  rows.forEach(r => {
+    const d = r.dateHour.slice(0, 8), h = +r.dateHour.slice(8);
+    if (d === curDay) t[h] = num(r.activeUsers); else if (d === prevDay) y[h] = num(r.activeUsers);
+  });
+  for (let h = 0; h <= Math.min(23, lastHour); h++) if (t[h] === null) t[h] = 0;
+  const W = 900, H = 160, L = 30, B = 20, max = Math.max(1, ...y, ...t.map(v => v || 0));
+  const top = niceMax(max), x = h => L + h * (W - L - 6) / 23, yy = v => 6 + (H - 6) * (1 - v / top);
+  let s = `<svg viewBox="0 0 ${W} ${H + B}" role="img" aria-label="Активные по часам">`;
+  [0, .5, 1].forEach(f => {
+    const v = Math.round(top * f);
+    s += `<line x1="${L}" x2="${W}" y1="${yy(v)}" y2="${yy(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${yy(v) + 3}" text-anchor="end">${v}</text>`;
+  });
+  for (let h = 0; h < 24; h += 3) s += `<text x="${x(h)}" y="${H + 15}" text-anchor="middle">${String(h).padStart(2, '0')}:00</text>`;
+  const path = arr => arr.map((v, h) => v === null ? null : `${x(h)},${yy(v)}`).filter(Boolean).join(' ');
+  s += `<polyline points="${path(y)}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  const tp = path(t);
+  if (tp) {
+    const pts = t.map((v, h) => v === null ? null : [x(h), yy(v)]).filter(Boolean);
+    s += `<polygon points="${pts[0][0]},${yy(0)} ${tp} ${pts[pts.length - 1][0]},${yy(0)}" fill="var(--accent-soft)"/>`;
+    s += `<polyline points="${tp}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
+    const last = pts[pts.length - 1];
+    s += `<circle cx="${last[0]}" cy="${last[1]}" r="4" fill="var(--accent)"/>`;
+  }
+  return s + '</svg>';
+}
+
+function daysChart(rows, dates, inPeriod) {
+  // GA4 skips days with no data; keep them on the axis as zero bars.
+  rows = dates.map(date => rows.find(r => r.date === date) || {date, activeUsers: 0, newUsers: 0});
+  const W = 900, H = 150, L = 30, B = 20, n = rows.length;
+  const top = niceMax(Math.max(1, ...rows.map(r => num(r.activeUsers))) * 1.15);
+  const bw = (W - L) / n, yy = v => 14 + (H - 14) * (1 - v / top);
+  const labelEvery = Math.ceil(n / 8);
+  let s = `<svg viewBox="0 0 ${W} ${H + B}" role="img" aria-label="Активные и новые по дням">`;
+  [0, .5, 1].forEach(f => {
+    const v = Math.round(top * f);
+    s += `<line x1="${L}" x2="${W}" y1="${yy(v)}" y2="${yy(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${yy(v) + 3}" text-anchor="end">${v}</text>`;
+  });
+  rows.forEach((r, i) => {
+    const a = num(r.activeUsers), nu = Math.min(a, num(r.newUsers)), gap = n > 20 ? 1.5 : 3;
+    const x0 = L + i * bw + gap, w = bw - gap * 2, op = inPeriod.has(r.date) ? 1 : .3;
+    s += `<g opacity="${op}"><rect x="${x0}" y="${yy(a)}" width="${w}" height="${yy(0) - yy(a)}" rx="2" fill="var(--accent)" opacity=".85"><title>${r.date}: активные ${a}, новые ${nu}</title></rect>`;
+    s += `<rect x="${x0}" y="${yy(nu)}" width="${w}" height="${yy(0) - yy(nu)}" rx="2" fill="var(--good)"/>`;
+    if (a && n <= 20) s += `<text x="${x0 + w / 2}" y="${yy(a) - 4}" text-anchor="middle">${a}</text>`;
+    s += '</g>';
+    if ((n - 1 - i) % labelEvery === 0) s += `<text x="${x0 + w / 2}" y="${H + 15}" text-anchor="middle">${r.date.slice(6)}.${r.date.slice(4, 6)}</text>`;
+  });
+  return s + '</svg>';
+}
+
+function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p * 2) / 2 * p || 1; }
+
+// ---------------------------------------------------------------- tables
+
+function table(rep, cols, opts = {}) {
+  if (!rep) return '<div class="empty">–</div>';
+  if (rep.error) return `<div class="err">${esc(rep.error)}</div>`;
+  const rows = rep.rows || [];
+  if (!rows.length) return `<div class="empty">${opts.empty || 'Пока ничего'}</div>`;
+  const barKey = opts.bar, max = barKey ? Math.max(1, ...rows.map(r => num(r[barKey]))) : 0;
+  let s = '<table><thead><tr>' + cols.map(c => `<th class="${c.n ? 'n' : ''}">${c.t}</th>`).join('') + (barKey ? '<th></th>' : '') + '</tr></thead><tbody>';
+  rows.forEach(r => {
+    s += '<tr>' + cols.map(c => `<td class="${c.n ? 'n' : ''} ${c.cls || ''}">${c.n ? fmt(r[c.k]) : esc(r[c.k] || '(not set)')}</td>`).join('');
+    if (barKey) s += `<td style="width:30%"><div class="bar"><span style="width:${num(r[barKey]) / max * 100}%"></span></div></td>`;
+    s += '</tr>';
+  });
+  return s + '</tbody></table>';
+}
+
+function delta(t, y, badWhenUp) {
+  if (!y && !t) return '<span class="pill flat">0</span>';
+  if (!y) return `<span class="pill ${badWhenUp ? 'down' : 'up'}">new</span>`;
+  const d = Math.round((t - y) / y * 100);
+  const cls = d === 0 ? 'flat' : ((d > 0) !== !!badWhenUp ? 'up' : 'down');
+  return `<span class="pill ${cls}">${d > 0 ? '+' : ''}${d}%</span>`;
+}
+
+// ---------------------------------------------------------------- loaders
+
+async function loadRealtime() {
+  if (!current) return;
+  const id = current;
+  try {
+    const d = await GA4.realtime(id);
+    if (id !== current) return;
+    lastError = ''; lastRt = Date.now();
+    $('expired').hidden = true;
+    const total = d.rt_total.error ? null : num((d.rt_total.rows[0] || {}).activeUsers);
+    $('rtTotal').firstChild.nodeValue = total === null ? '!' : String(total);
+    $('rtMinutes').innerHTML = d.rt_minutes.error ? `<div class="err">${esc(d.rt_minutes.error)}</div>` : minutesChart(d.rt_minutes.rows);
+    $('rtEvents').innerHTML = table(d.rt_events, [{t: 'Событие', k: 'eventName'}, {t: 'Кол-во', k: 'eventCount', n: 1}], {bar: 'eventCount', empty: 'За 30 минут событий нет'});
+    $('rtCountries').innerHTML = table(d.rt_countries, [{t: 'Страна', k: 'country'}, {t: 'Активные', k: 'activeUsers', n: 1}], {bar: 'activeUsers', empty: 'Сейчас никого нет'});
+    setStatus();
+  } catch (e) { fail(e); }
+}
+
+async function loadReports() {
+  if (!current) return;
+  const id = current, p = period;
+  document.body.classList.add('loading');
+  try {
+    const d = await GA4.reports(id, p);
+    if (id !== current || p !== period) return;
+    renderReports(d);
+  } catch (e) { fail(e); }
+  finally { if (id === current && p === period) document.body.classList.remove('loading'); }
+}
+
+// Splits a two-range report (dateRange = cur / prev) into {cur: [...], prev: [...]}.
+function byRange(rep) {
+  const out = {cur: [], prev: []};
+  ((rep && rep.rows) || []).forEach(r => (out[r.dateRange] || (out[r.dateRange] = [])).push(r));
+  return out;
+}
+
+function renderReports(d) {
+  const P = PERIODS[d.period] || PERIODS.today;
+  const tot = byRange(d.totals), T = tot.cur[0] || {}, Y = tot.prev[0] || {};
+
+  const evR = byRange(d.events), ev = {};
+  evR.cur.forEach(r => { (ev[r.eventName] ||= {}).t = r; });
+  evR.prev.forEach(r => { (ev[r.eventName] ||= {}).y = r; });
+  const evc = (name, w) => num(((ev[name] || {})[w] || {}).eventCount);
+  const purch = w => evc('purchase', w) + evc('in_app_purchase', w);
+  const perUser = r => num(r.activeUsers) ? num(r.userEngagementDuration) / num(r.activeUsers) : 0;
+
+  const tiles = [
+    ['Активные', num(T.activeUsers), num(Y.activeUsers), fmt],
+    ['Новые', num(T.newUsers), num(Y.newUsers), fmt],
+    ['Сессии', num(T.sessions), num(Y.sessions), fmt],
+    ['Время на игрока', perUser(T), perUser(Y), dur],
+    ['Удаления', evc('app_remove', 't'), evc('app_remove', 'y'), fmt, true],
+    ['Покупки', purch('t'), purch('y'), fmt],
+    ['Ошибки покупок', evc('purchase_failed', 't'), evc('purchase_failed', 'y'), fmt, true],
+    ['Выручка', num(T.totalRevenue), num(Y.totalRevenue), fmt],
+  ];
+  $('tiles').innerHTML = d.totals.error ? `<div class="err">${esc(d.totals.error)}</div>` : tiles.map(([label, t, y, f, bad]) =>
+    `<div class="tile"><span class="label">${label}</span><span class="val">${f(t)}</span>` +
+    `<span class="sub">${delta(t, y, bad)}${P.prev} ${f(y)}</span></div>`).join('');
+
+  if (d.hours) {
+    // A finished day (yesterday) gets all 24 hours; today stops at the current hour.
+    const lastHour = d.period === 'today' ? d.hour : 23;
+    $('hours').innerHTML = d.hours.error ? `<div class="err">${esc(d.hours.error)}</div>` : hoursChart(d.hours.rows || [], d.cur_day, d.prev_day, lastHour);
+  }
+  $('daysTitle').textContent = 'По дням, ' + d.chart_days.length + ' дней';
+  $('daysHint').textContent = d.period === 'month' ? '' : 'яркие столбцы: выбранный период';
+  $('days').innerHTML = d.days.error ? `<div class="err">${esc(d.days.error)}</div>` : daysChart(d.days.rows || [], d.chart_days, new Set(d.period_days));
+
+  if (d.events.error) $('events').innerHTML = `<div class="err">${esc(d.events.error)}</div>`;
+  else {
+    const names = Object.keys(ev).sort((a, b) => evc(b, 't') - evc(a, 't'));
+    const cap = s => s[0].toUpperCase() + s.slice(1);
+    $('events').innerHTML = names.length ? `<table><thead><tr><th>Событие</th><th class="n">${cap(P.cur)}</th><th class="n">Игроков</th><th class="n" title="${P.prev}">${P.col}</th><th></th></tr></thead><tbody>` +
+      names.map(n => `<tr><td>${esc(n)}</td><td class="n">${fmt(evc(n, 't'))}</td><td class="n">${fmt(((ev[n].t) || {}).totalUsers)}</td><td class="n">${fmt(evc(n, 'y'))}</td><td class="n">${delta(evc(n, 't'), evc(n, 'y'), BAD_EVENTS.has(n))}</td></tr>`).join('') +
+      '</tbody></table>' : '<div class="empty">Ключевых событий нет</div>';
+  }
+  const reasonCols = [{t: 'Событие', k: 'eventName'}];
+  if (!d.fail_reasons.reduced) reasonCols.push({t: 'Причина', k: 'customEvent:reason', cls: 'reason'});
+  reasonCols.push({t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1});
+  $('reasons').innerHTML = table(d.fail_reasons, reasonCols, {empty: 'Ошибок нет'});
+  $('versions').innerHTML = table(d.versions, [{t: 'Версия', k: 'appVersion'}, {t: 'Активные', k: 'activeUsers', n: 1}, {t: 'Новые', k: 'newUsers', n: 1}], {bar: 'activeUsers'});
+  $('countries').innerHTML = table(d.countries, [{t: 'Страна', k: 'country'}, {t: 'Активные', k: 'activeUsers', n: 1}, {t: 'Новые', k: 'newUsers', n: 1}], {bar: 'activeUsers'});
+}
+
+let started = false;
+
+// Runs once a Google token is in hand: list properties and start polling.
+async function start() {
+  $('signin').hidden = true; $('expired').hidden = true;
+  $('app').hidden = false; $('refresh').hidden = false; $('signout').hidden = false;
+  try {
+    props = await GA4.properties();
+    if (!props.length) { lastError = 'у этого Google-аккаунта нет доступа ни к одному GA4-ресурсу'; setStatus(); return; }
+    const saved = store('gp.property');
+    select(props.some(x => x.id === (current || saved)) ? (current || saved) : props[0].id);
+  } catch (e) { fail(e); }
+  if (started) return;
+  started = true;
+  setInterval(loadRealtime, RT_EVERY);
+  setInterval(loadReports, REPORTS_EVERY);
+  setInterval(setStatus, 10e3);
+}
+
+async function signIn(errEl) {
+  try { await GA4.signIn(); start(); }
+  catch (e) { if (errEl) { errEl.hidden = false; errEl.textContent = 'Не удалось войти: ' + e.message; } else fail(e); }
+}
+
+function init() {
+  const savedPeriod = store('gp.period');
+  if (PERIODS[savedPeriod]) period = savedPeriod;
+  renderPeriods();
+  const C = window.GAME_PULSE, ex = C.excludeCountries.map(c => 'страна ' + c);
+  if (C.excludeDeviceRegex) ex.push('устройства ' + C.excludeDeviceRegex + ' (роботы Play)');
+  $('filterNote').textContent = 'Исключены: ' + ex.join(', ') + '. Live-блоки фильтруются только по стране. Данные за сегодня GA4 отдаёт с задержкой от нескольких минут до пары часов. Неделя и месяц включают сегодняшний день; активные за период считаются уникальными игроками, а не суммой по дням.';
+  if (/^PASTE_/.test(C.clientId)) {
+    $('signinErr').hidden = false;
+    $('signinErr').textContent = 'В config.js не указан OAuth Client ID.';
+    $('signinBtn').disabled = true;
+    return;
+  }
+  GA4.initAuth();
+  if (GA4.signedIn()) start();
+}
+
+$('signinBtn').onclick = () => signIn($('signinErr'));
+$('reloginBtn').onclick = () => signIn(null);
+$('refresh').onclick = () => { GA4.clearCache(); loadRealtime(); loadReports(); };
+$('signout').onclick = () => { GA4.signOut(); location.reload(); };
+init();
+</script>
+</body>
+</html>
