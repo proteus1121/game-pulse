@@ -8,6 +8,12 @@ the signed-in account can read shows up as a tab.
 - "Сейчас в игре": Realtime API, last 30 minutes, refreshed every minute.
 - Today / yesterday / week / month: regular reports, refreshed every 5 minutes,
   each compared with the previous period of the same length.
+- "Прохождение уровней": per-level funnel for games listed in `config.js > games`
+  - players who started / passed each level, attempts, losses, averages
+  (time, moves, score), the level where most players leave and the hardest one,
+  plus small tables (boosters, stars, purchases...). Built from event params
+  registered as custom dimensions / metrics in GA4 (registered 21.10.2026;
+  GA4 doesn't backfill, older events show up as "(not set)" and are skipped).
 
 Nothing in this repo is secret. The numbers are only visible to a Google
 account that has access to the GA4 properties.

@@ -98,6 +98,17 @@ td.n, th.n { text-align: right; font-family: var(--mono); }
 td.reason { white-space: normal; word-break: break-all; font-family: var(--mono); font-size: 12px; }
 .bar { height: 6px; background: var(--accent-soft); border-radius: 3px; position: relative; min-width: 40px; }
 .bar span { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; }
+.contents { display: contents; }
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.insight { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 12px; }
+.insight.bad { border-left-color: var(--bad); }
+.insight.warn { border-left-color: var(--warn); }
+.insight b { display: block; font: 600 20px/1.2 var(--mono); margin-bottom: 2px; }
+.insight span { color: var(--muted); font-size: 12px; }
+tr.hot td { background: color-mix(in srgb, var(--bad) 10%, transparent); }
+td.lvl { font-family: var(--mono); }
+#levelsTable { max-height: 460px; overflow-y: auto; margin-top: 8px; }
+#levelsTable thead th { position: sticky; top: 0; background: var(--panel); }
 .empty, .err { color: var(--muted); font-size: 13px; padding: 8px 0; }
 .err { color: var(--bad); font-family: var(--mono); font-size: 12px; word-break: break-word; }
 .note { color: var(--muted); font-size: 12px; }
@@ -180,6 +191,15 @@ td.reason { white-space: normal; word-break: break-all; font-family: var(--mono)
       <div class="legend"><span><i></i>активные</span><span><i class="n"></i>новые</span><span id="daysHint"></span></div>
       <div class="chart" id="days"></div>
     </div>
+    <div class="panel wide" id="levelsPanel" hidden>
+      <h2 id="levelsTitle">Уровни</h2>
+      <div class="insights" id="levelsInsights"></div>
+      <div class="legend" id="levelsLegend"><span><i></i>начали уровень</span><span><i class="n"></i>прошли</span><span>игроков, по уровням</span></div>
+      <div class="chart" id="levelsChart"></div>
+      <div class="tbl" id="levelsTable"></div>
+      <p class="note" id="levelsNote"></p>
+    </div>
+    <div id="breakdowns" class="contents"></div>
     <div class="panel"><h2>События, 30 мин</h2><div class="tbl" id="rtEvents"></div></div>
     <div class="panel"><h2>Страны, 30 мин</h2><div class="tbl" id="rtCountries"></div></div>
     <div class="panel"><h2>Ключевые события</h2><div class="tbl" id="events"></div></div>
@@ -245,6 +265,7 @@ function renderPeriods() {
   $('reasonsTitle').textContent = 'Ошибки покупок ' + P.where;
   $('lossesTitle').textContent = 'Причины проигрышей ' + P.where;
   $('versionsTitle').textContent = 'Версии ' + P.where;
+  $('levelsTitle').textContent = 'Прохождение уровней ' + P.where;
   $('countriesTitle').textContent = 'Страны ' + P.where;
   $('hoursPanel').hidden = !(period === 'today' || period === 'yesterday');
   $('hoursCur').textContent = P.cur;
@@ -446,9 +467,165 @@ function renderReports(d) {
     ? Object.assign({}, d.fail_reasons, {rows: d.fail_reasons.rows.filter(r => r.eventName === name)})
     : d.fail_reasons;
   $('reasons').innerHTML = table(byEvent('purchase_failed'), reasonCols, {empty: 'Ошибок нет'});
-  $('losses').innerHTML = table(byEvent('level_failed'), reasonCols, {empty: 'Проигрышей нет'});
+  const game = (window.GAME_PULSE.games || {})[current];
+  $('losses').innerHTML = table(byEvent(game && game.lose === 'level_fail' ? 'level_fail' : 'level_failed'), reasonCols, {empty: 'Проигрышей нет'});
+  renderLevels(d, game);
   $('versions').innerHTML = table(d.versions, [{t: 'Версия', k: 'appVersion'}, {t: 'Активные', k: 'activeUsers', n: 1}, {t: 'Новые', k: 'newUsers', n: 1}], {bar: 'activeUsers'});
   $('countries').innerHTML = table(d.countries, [{t: 'Страна', k: 'country'}, {t: 'Активные', k: 'activeUsers', n: 1}, {t: 'Новые', k: 'newUsers', n: 1}], {bar: 'activeUsers'});
+}
+
+// ---------------------------------------------------------------- levels
+
+const CD = name => 'customEvent:' + name;
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+
+// Folds the funnel report into one row per level. Events sent before the
+// level param was registered come back as "(not set)" and are only counted.
+function levelStats(d, game) {
+  const by = new Map(), get = L => by.get(L) || by.set(L, {L, starts: 0, startU: 0, wins: 0, winU: 0, loses: 0, loseU: 0, cols: {}, avgs: []}).get(L);
+  let unset = 0;
+  (d.lv_funnel.rows || []).forEach(r => {
+    const L = r[CD(game.level)], n = num(r.eventCount), u = num(r.totalUsers), ev = r.eventName;
+    if (!L || L === '(not set)') { unset += n; return; }
+    const s = get(L);
+    if (ev === game.start) { s.starts += n; s.startU += u; }
+    if (game.outcome && ev === game.win) {
+      if (r[CD(game.outcome)] === '1') { s.wins += n; s.winU += u; } else { s.loses += n; s.loseU += u; }
+    } else {
+      if (ev === game.win) { s.wins += n; s.winU += u; }
+      if (ev === game.lose) { s.loses += n; s.loseU += u; }
+    }
+    (game.cols || []).forEach(c => { if (ev === c.event) s.cols[c.event] = (s.cols[c.event] || 0) + n; });
+  });
+  (game.avgs || []).forEach((a, i) => {
+    const rep = d['lv_avg' + i];
+    ((rep && rep.rows) || []).forEach(r => {
+      const L = r[CD(game.level)];
+      if (!L || L === '(not set)' || !by.has(L)) return;
+      const n = num(r.eventCount), v = num(r[CD(a.metric)]);
+      by.get(L).avgs[i] = n && v ? v / n : null;
+    });
+  });
+  const list = [...by.values()];
+  if (game.ordered) list.sort((a, b) => num(a.L) - num(b.L));
+  else list.sort((a, b) => b.startU - a.startU || b.starts - a.starts);
+  return {list, unset};
+}
+
+// The level where the most players stop: the share of players who started
+// level L but never started L+1. The last level is left out - players
+// still on their way there aren't gone.
+function biggestDrop(list) {
+  let best = null;
+  for (let i = 0; i + 1 < list.length; i++) {
+    const a = list[i], b = list[i + 1];
+    if (num(b.L) !== num(a.L) + 1 || a.startU < 3) continue;
+    const drop = 1 - b.startU / a.startU;
+    if (drop > 0 && (!best || drop > best.drop)) best = {L: a.L, from: a.startU, to: b.startU, drop};
+  }
+  return best;
+}
+
+function hardestLevel(list) {
+  let best = null;
+  list.forEach(s => {
+    if (s.startU < 3) return;
+    const rate = Math.min(1, s.winU / s.startU);
+    if (!best || rate < best.rate) best = {L: s.L, rate, starts: s.starts, startU: s.startU};
+  });
+  return best;
+}
+
+function levelsChart(list, drop) {
+  const W = 900, H = 150, L = 34, B = 20, n = list.length;
+  const top = niceMax(Math.max(1, ...list.map(s => s.startU)) * 1.15);
+  const bw = (W - L) / n, yy = v => 14 + (H - 14) * (1 - v / top);
+  const labelEvery = Math.ceil(n / 20), gap = n > 30 ? 1 : 2;
+  let s = `<svg viewBox="0 0 ${W} ${H + B}" role="img" aria-label="Игроки по уровням: начали и прошли">`;
+  [0, .5, 1].forEach(f => {
+    const v = Math.round(top * f);
+    s += `<line x1="${L}" x2="${W}" y1="${yy(v)}" y2="${yy(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${yy(v) + 3}" text-anchor="end">${v}</text>`;
+  });
+  list.forEach((st, i) => {
+    const x0 = L + i * bw + gap, w = Math.max(1, bw - gap * 2), won = Math.min(st.startU, st.winU);
+    s += `<g><title>Уровень ${esc(st.L)}: начали ${st.startU}, прошли ${won} (${pct(won, st.startU)}%), попыток ${st.starts}</title>`;
+    s += `<rect x="${x0}" y="${yy(st.startU)}" width="${w}" height="${yy(0) - yy(st.startU)}" rx="2" fill="var(--accent)" opacity=".85"/>`;
+    s += `<rect x="${x0}" y="${yy(won)}" width="${w}" height="${yy(0) - yy(won)}" rx="2" fill="var(--good)"/>`;
+    s += `<rect x="${x0 - gap}" y="0" width="${bw}" height="${H}" fill="transparent"/></g>`;
+    if (drop && st.L === drop.L) {
+      const cx = x0 + w / 2, ty = yy(st.startU) - 6;
+      s += `<path d="M${cx - 5} ${ty - 8} L${cx + 5} ${ty - 8} L${cx} ${ty} Z" fill="var(--bad)"/>`;
+      s += `<text x="${cx}" y="${ty - 12}" text-anchor="middle" style="fill:var(--fg)">−${Math.round(drop.drop * 100)}%</text>`;
+    }
+    if (i % labelEvery === 0 || i === n - 1) s += `<text x="${x0 + w / 2}" y="${H + 15}" text-anchor="middle">${esc(String(st.L).slice(0, 8))}</text>`;
+  });
+  return s + '</svg>';
+}
+
+function renderLevels(d, game) {
+  $('levelsPanel').hidden = !game;
+  $('breakdowns').innerHTML = '';
+  if (!game) return;
+  const C = window.GAME_PULSE;
+  if (d.lv_funnel.error) {
+    $('levelsInsights').innerHTML = ''; $('levelsChart').innerHTML = ''; $('levelsNote').textContent = '';
+    $('levelsTable').innerHTML = `<div class="err">${esc(d.lv_funnel.error)}</div>`;
+    return;
+  }
+  const {list, unset} = levelStats(d, game);
+  const winLabel = game.winLabel || 'Прошли';
+  const base = list.length ? Math.max(...list.map(s => s.startU)) : 0;
+
+  // Headline cards: where players leave, which level stops them, how many there are.
+  const cards = [];
+  const totalStartU = game.ordered && list.length ? list[0].startU : base;
+  cards.push(['', fmt(totalStartU), game.ordered ? `игроков начали уровень ${esc(list[0] ? list[0].L : '–')}` : 'игроков в самом популярном уровне']);
+  if (game.ordered) {
+    const drop = biggestDrop(list);
+    if (drop) cards.push(['bad', `после ур. ${esc(drop.L)}: −${Math.round(drop.drop * 100)}%`, `сильнее всего уходят: из ${drop.from} игроков дальше пошли ${drop.to}`]);
+    const far = list.length ? list[list.length - 1].L : null;
+    if (far) cards.push(['', 'ур. ' + esc(far), 'самый дальний уровень за период']);
+  }
+  const hard = hardestLevel(list);
+  if (hard && game.win) cards.push(['warn', `ур. ${esc(hard.L)}: ${Math.round(hard.rate * 100)}%`, `самый трудный: столько игроков его прошли, ${fmt(hard.starts / hard.startU)} попыток на игрока`]);
+  $('levelsInsights').innerHTML = list.length ? cards.map(([cls, b, t]) => `<div class="insight ${cls}"><b>${b}</b><span>${t}</span></div>`).join('') : '';
+
+  const drop = game.ordered ? biggestDrop(list) : null;
+  $('levelsLegend').hidden = !list.length;
+  $('levelsChart').innerHTML = list.length > 1 ? levelsChart(list, drop) : '';
+
+  if (!list.length) {
+    $('levelsTable').innerHTML = `<div class="empty">Данных по уровням ещё нет. Параметры зарегистрированы ${esc(C.levelsSince)} — GA4 показывает их только для событий после этой даты, первые цифры появятся через сутки-двое.</div>`;
+  } else {
+    const cols = ['<th>Уровень</th>', '<th class="n">Начали</th>', '<th class="n" title="запусков уровня">Попыток</th>'];
+    if (game.win) cols.push(`<th class="n">${winLabel}</th>`, `<th class="n" title="${winLabel.toLowerCase()} / начали, игроков">%</th>`);
+    if (game.lose) cols.push('<th class="n">Проигрыши</th>');
+    (game.cols || []).forEach(c => cols.push(`<th class="n">${esc(c.t)}</th>`));
+    (game.avgs || []).forEach(a => cols.push(`<th class="n">${esc(a.t)}</th>`));
+    cols.push(`<th>${game.ordered ? 'Дошли' : 'Игроков'}</th>`);
+    let s = '<table><thead><tr>' + cols.join('') + '</tr></thead><tbody>';
+    list.forEach(st => {
+      const won = Math.min(st.startU, st.winU), reach = base ? st.startU / base : 0;
+      s += `<tr class="${drop && st.L === drop.L ? 'hot' : ''}"><td class="lvl">${esc(st.L)}</td><td class="n">${fmt(st.startU)}</td><td class="n">${fmt(st.starts)}</td>`;
+      if (game.win) s += `<td class="n">${fmt(won)}</td><td class="n">${st.startU ? pct(won, st.startU) + '%' : '–'}</td>`;
+      if (game.lose) s += `<td class="n">${fmt(st.loses)}</td>`;
+      (game.cols || []).forEach(c => s += `<td class="n">${fmt(st.cols[c.event] || 0)}</td>`);
+      (game.avgs || []).forEach((a, i) => { const v = st.avgs[i]; s += `<td class="n">${v == null ? '–' : a.fmt === 'dur' ? dur(v) : fmt(v)}</td>`; });
+      s += `<td style="width:18%"><div class="bar" title="${Math.round(reach * 100)}%"><span style="width:${reach * 100}%"></span></div></td></tr>`;
+    });
+    $('levelsTable').innerHTML = s + '</tbody></table>';
+  }
+  const notes = [];
+  if (list.length && base < 30) notes.push(`Мало данных (${base} игроков): один игрок — это ${Math.round(100 / Math.max(1, base))}%, выводы пока предварительные.`);
+  if (game.ordered) notes.push('«Дошли» — доля от самого массового уровня. Последние уровни естественно ниже: часть игроков просто ещё до них не добралась.');
+  if (unset) notes.push(`${fmt(unset)} событий без номера уровня — отправлены до регистрации параметров (${C.levelsSince}).`);
+  $('levelsNote').textContent = notes.join(' ');
+
+  // rows without the param are old events from before it was registered
+  const known = (rep, k) => rep && rep.rows ? Object.assign({}, rep, {rows: rep.rows.filter(r => r[k] && r[k] !== '(not set)')}) : rep;
+  $('breakdowns').innerHTML = (game.breakdowns || []).map((b, i) =>
+    `<div class="panel"><h2>${esc(b.t)}</h2><div class="tbl">${table(known(d['lv_br' + i], CD(b.dim)), [{t: b.col, k: CD(b.dim)}, {t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1}],
+      {bar: 'eventCount', empty: 'Пока ничего — данные идут с ' + C.levelsSince})}</div></div>`).join('');
 }
 
 let started = false;

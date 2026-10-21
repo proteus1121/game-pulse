@@ -121,7 +121,7 @@
   const PERIODS = {today: [0, 0, 14], yesterday: [1, 1, 14], week: [6, 0, 14], month: [29, 0, 30]};
   const ago = n => n === 0 ? 'today' : n === 1 ? 'yesterday' : n + 'daysAgo';
 
-  function coreReports(period) {
+  function coreReports(period, game) {
     const [start, end, chart] = PERIODS[period];
     const len = start - end + 1;
     const cur = {startDate: ago(start), endDate: ago(end), name: 'cur'};
@@ -138,12 +138,30 @@
       countries: rep(['country'], ['activeUsers', 'newUsers'], [cur], null, Object.assign({limit: 15}, top('activeUsers'))),
       versions: rep(['appVersion'], ['activeUsers', 'newUsers'], [cur], null, Object.assign({limit: 10}, top('activeUsers'))),
       fail_reasons: rep(['eventName', 'customEvent:reason'], ['eventCount', 'totalUsers'], [cur],
-        eventIn(['purchase_failed', 'level_failed']), Object.assign({limit: 20}, top('eventCount'))),
+        eventIn(['purchase_failed', 'level_failed', 'level_fail']), Object.assign({limit: 20}, top('eventCount'))),
     };
     if (len === 1) {
       reports.hours = rep(['dateHour'], ['activeUsers', 'newUsers'], [{startDate: prev.startDate, endDate: cur.endDate}]);
     }
+    if (game) Object.assign(reports, levelReports(game, rep, [cur], top));
     return reports;
+  }
+
+  // The level funnel: per level and event, how many times and how many players.
+  const cd = name => 'customEvent:' + name;
+  const eventIs = name => ({filter: {fieldName: 'eventName', stringFilter: {value: name}}});
+
+  function levelReports(game, rep, ranges, top) {
+    const events = [...new Set([game.start, game.win, game.lose].concat((game.cols || []).map(c => c.event)).filter(Boolean))];
+    const d = [cd(game.level), 'eventName'].concat(game.outcome ? [cd(game.outcome)] : []);
+    const out = {lv_funnel: rep(d, ['eventCount', 'totalUsers'], ranges, eventIn(events), {limit: 2000})};
+    (game.avgs || []).forEach((a, i) => {
+      out['lv_avg' + i] = rep([cd(game.level)], ['eventCount', cd(a.metric)], ranges, eventIs(a.event), {limit: 1000});
+    });
+    (game.breakdowns || []).forEach((b, i) => {
+      out['lv_br' + i] = rep([cd(b.dim)], ['eventCount', 'totalUsers'], ranges, eventIs(b.event), Object.assign({limit: 15}, top('eventCount')));
+    });
+    return out;
   }
 
   // Used when a property has no such custom dimension (GA4 answers 400
@@ -222,7 +240,7 @@
 
   async function reports(prop, period) {
     const [data, tz] = await Promise.all([
-      runGroup(prop, 'core:' + period, coreReports(period), 'runReport', CFG.reportsCacheSec),
+      runGroup(prop, 'core:' + period, coreReports(period, (CFG.games || {})[prop]), 'runReport', CFG.reportsCacheSec),
       timeZone(prop),
     ]);
     return Object.assign({}, data, propertyDays(tz, period));
