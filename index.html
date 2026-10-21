@@ -183,7 +183,8 @@ td.reason { white-space: normal; word-break: break-all; font-family: var(--mono)
     <div class="panel"><h2>События, 30 мин</h2><div class="tbl" id="rtEvents"></div></div>
     <div class="panel"><h2>Страны, 30 мин</h2><div class="tbl" id="rtCountries"></div></div>
     <div class="panel"><h2>Ключевые события</h2><div class="tbl" id="events"></div></div>
-    <div class="panel"><h2 id="reasonsTitle">Причины ошибок</h2><div class="tbl" id="reasons"></div></div>
+    <div class="panel"><h2 id="reasonsTitle">Ошибки покупок</h2><div class="tbl" id="reasons"></div></div>
+    <div class="panel"><h2 id="lossesTitle">Причины проигрышей</h2><div class="tbl" id="losses"></div></div>
     <div class="panel"><h2 id="versionsTitle">Версии</h2><div class="tbl" id="versions"></div></div>
     <div class="panel"><h2 id="countriesTitle">Страны</h2><div class="tbl" id="countries"></div></div>
   </section>
@@ -241,7 +242,8 @@ function renderPeriods() {
   $('periods').querySelectorAll('button').forEach(b => b.onclick = () => setPeriod(b.dataset.p));
   const P = PERIODS[period];
   $('periodTitle').textContent = P.title;
-  $('reasonsTitle').textContent = 'Причины ошибок ' + P.where;
+  $('reasonsTitle').textContent = 'Ошибки покупок ' + P.where;
+  $('lossesTitle').textContent = 'Причины проигрышей ' + P.where;
   $('versionsTitle').textContent = 'Версии ' + P.where;
   $('countriesTitle').textContent = 'Страны ' + P.where;
   $('hoursPanel').hidden = !(period === 'today' || period === 'yesterday');
@@ -434,10 +436,17 @@ function renderReports(d) {
       names.map(n => `<tr><td>${esc(n)}</td><td class="n">${fmt(evc(n, 't'))}</td><td class="n">${fmt(((ev[n].t) || {}).totalUsers)}</td><td class="n">${fmt(evc(n, 'y'))}</td><td class="n">${delta(evc(n, 't'), evc(n, 'y'), BAD_EVENTS.has(n))}</td></tr>`).join('') +
       '</tbody></table>' : '<div class="empty">Ключевых событий нет</div>';
   }
-  const reasonCols = [{t: 'Событие', k: 'eventName'}];
+  // One GA4 report, split by event: a lost level is normal gameplay, not an
+  // error, so it gets its own panel instead of sitting under "errors".
+  const reasonCols = [];
   if (!d.fail_reasons.reduced) reasonCols.push({t: 'Причина', k: 'customEvent:reason', cls: 'reason'});
+  else reasonCols.push({t: 'Событие', k: 'eventName'});
   reasonCols.push({t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1});
-  $('reasons').innerHTML = table(d.fail_reasons, reasonCols, {empty: 'Ошибок нет'});
+  const byEvent = name => d.fail_reasons.rows
+    ? Object.assign({}, d.fail_reasons, {rows: d.fail_reasons.rows.filter(r => r.eventName === name)})
+    : d.fail_reasons;
+  $('reasons').innerHTML = table(byEvent('purchase_failed'), reasonCols, {empty: 'Ошибок нет'});
+  $('losses').innerHTML = table(byEvent('level_failed'), reasonCols, {empty: 'Проигрышей нет'});
   $('versions').innerHTML = table(d.versions, [{t: 'Версия', k: 'appVersion'}, {t: 'Активные', k: 'activeUsers', n: 1}, {t: 'Новые', k: 'newUsers', n: 1}], {bar: 'activeUsers'});
   $('countries').innerHTML = table(d.countries, [{t: 'Страна', k: 'country'}, {t: 'Активные', k: 'activeUsers', n: 1}, {t: 'Новые', k: 'newUsers', n: 1}], {bar: 'activeUsers'});
 }
