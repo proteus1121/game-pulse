@@ -133,7 +133,9 @@
       // Without a date dimension GA4 de-duplicates users over the whole
       // range, so a week's active users are unique players, not a sum.
       totals: rep([], ['activeUsers', 'newUsers', 'sessions', 'userEngagementDuration', 'totalRevenue'], [cur, prev]),
-      events: rep(['eventName'], ['eventCount', 'totalUsers'], [cur, prev], eventIn(CFG.keyEvents)),
+      // Every event the game sends, so new ones show up without a config change;
+      // GA4's automatic ones (screen_view...) are hidden on the page.
+      events: rep(['eventName'], ['eventCount', 'totalUsers'], [cur, prev], null, {limit: 200}),
       days: rep(['date'], ['activeUsers', 'newUsers'], [{startDate: ago(chart - 1), endDate: 'today'}]),
       countries: rep(['country'], ['activeUsers', 'newUsers'], [cur], null, Object.assign({limit: 15}, top('activeUsers'))),
       versions: rep(['appVersion'], ['activeUsers', 'newUsers'], [cur], null, Object.assign({limit: 10}, top('activeUsers'))),
@@ -145,6 +147,21 @@
     }
     if (game) Object.assign(reports, levelReports(game, rep, [cur], top));
     return reports;
+  }
+
+  // The "all games" tab: a few light reports per property, same periods.
+  function overviewReports(period) {
+    const [start, end, chart] = PERIODS[period];
+    const len = start - end + 1;
+    const cur = {startDate: ago(start), endDate: ago(end), name: 'cur'};
+    const prev = {startDate: ago(start + len), endDate: ago(end + len), name: 'prev'};
+    const rep = (d, m, ranges, extra, more = {}) =>
+      withFilter(Object.assign({dateRanges: ranges, dimensions: dims(d), metrics: dims(m)}, more), false, extra);
+    return {
+      totals: rep([], ['activeUsers', 'newUsers', 'sessions', 'userEngagementDuration'], [cur, prev]),
+      events: rep(['eventName'], ['eventCount', 'totalUsers'], [cur, prev], eventIn(CFG.overviewEvents)),
+      days: rep(['date'], ['activeUsers'], [{startDate: ago(chart - 1), endDate: 'today'}]),
+    };
   }
 
   // The level funnel: per level and event, how many times and how many players.
@@ -246,6 +263,23 @@
     return Object.assign({}, data, propertyDays(tz, period));
   }
 
-  window.GA4 = {NeedLogin, initAuth, signIn, signOut, signedIn, properties, realtime, reports,
+  // Per property: the overview reports plus the realtime head count. A
+  // property that fails (no access, quota) keeps its error, the rest still show.
+  async function overview(propIds, period) {
+    const one = async prop => {
+      const rtRep = {rt_total: withFilter({metrics: dims(['activeUsers'])}, true)};
+      const [data, rt, tz] = await Promise.all([
+        runGroup(prop, 'ov:' + period, overviewReports(period), 'runReport', CFG.reportsCacheSec),
+        runGroup(prop, 'ovrt', rtRep, 'runRealtimeReport', CFG.realtimeCacheSec),
+        timeZone(prop),
+      ]);
+      return [prop, Object.assign({}, data, rt, {tz})];
+    };
+    const byProp = Object.fromEntries(await Promise.all(propIds.map(one)));
+    const tz = propIds.length ? byProp[propIds[0]].tz : '';
+    return Object.assign({games: byProp}, propertyDays(tz, period));
+  }
+
+  window.GA4 = {NeedLogin, initAuth, signIn, signOut, signedIn, properties, realtime, reports, overview,
                 clearCache: () => cache.clear(), PERIODS};
 })();

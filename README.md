@@ -5,6 +5,11 @@ the page signs in with Google (read-only `analytics.readonly`) and queries
 the GA4 Data API and Admin API straight from the browser. Every GA4 property
 the signed-in account can read shows up as a tab.
 
+- "Все игры" (first tab): every game side by side - who is playing now,
+  totals for the period, bar charts per metric (active, new, time and levels
+  per player, uninstalls) against the previous period, players per day
+  stacked by game, a summary table. Game names, order and colours come from
+  `config.js > titles`.
 - "Сейчас в игре": Realtime API, last 30 minutes, refreshed every minute.
 - Today / yesterday / week / month: regular reports, refreshed every 5 minutes,
   each compared with the previous period of the same length.
@@ -34,6 +39,11 @@ Local run: `python -m http.server 8000`, then open http://localhost:8000/.
 ## Notes
 
 - Filters (developer's country, Play pre-launch robots) live in `config.js`.
+- The per-game events table lists every event the game sends (GA4's automatic
+  ones hidden), with a plain-words description from `config.js > events`.
+  A new event shows up by itself; add a line there to describe it.
+- A breakdown whose param isn't registered in GA4 says so on the page instead
+  of failing. Not registered yet: Lift 13 `from`, `code`, `step`.
 - A Google token lasts an hour; after that the page shows "Войти снова".
   With the consent screen in Testing mode Google may also ask to sign in
   again after 7 days.

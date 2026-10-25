@@ -21,6 +21,9 @@
   --warn: #f2b84b;
   --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --mono: "JetBrains Mono", Consolas, ui-monospace, monospace;
+  /* one colour per game on the "all games" charts, fixed order */
+  --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500;
+  --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -28,12 +31,16 @@
     --bg: #f3f5f8; --panel: #ffffff; --line: #dde2e9; --fg: #18202a; --muted: #5d6b7c;
     --accent: #1673c9; --accent-soft: rgba(22, 115, 201, .16);
     --good: #138a55; --bad: #cf3434; --warn: #a86b00; color-scheme: light;
+    --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100;
+    --c5: #e87ba4; --c6: #008300; --c7: #6250d6; --c8: #e34948;
   }
 }
 :root[data-theme="light"] {
   --bg: #f3f5f8; --panel: #ffffff; --line: #dde2e9; --fg: #18202a; --muted: #5d6b7c;
   --accent: #1673c9; --accent-soft: rgba(22, 115, 201, .16);
   --good: #138a55; --bad: #cf3434; --warn: #a86b00; color-scheme: light;
+  --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100;
+  --c5: #e87ba4; --c6: #008300; --c7: #6250d6; --c8: #e34948;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -109,6 +116,25 @@ tr.hot td { background: color-mix(in srgb, var(--bad) 10%, transparent); }
 td.lvl { font-family: var(--mono); }
 #levelsTable { max-height: 460px; overflow-y: auto; margin-top: 8px; }
 #levelsTable thead th { position: sticky; top: 0; background: var(--panel); }
+.ev small { display: block; color: var(--muted); font: 11px var(--mono); }
+.ev { white-space: normal; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; flex: none; }
+.hint { color: var(--muted); font-size: 12px; margin: -6px 0 12px; }
+.cmpgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px 28px; }
+.cmp h3 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+.cmp .hint { margin: 0 0 10px; }
+.cmprow { display: grid; grid-template-columns: minmax(80px, 110px) 1fr auto; gap: 10px; align-items: center; padding: 4px 0; }
+.cmprow .name { display: flex; align-items: center; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmprow .track { position: relative; height: 14px; }
+.cmprow .fill { position: absolute; inset: 0 auto 0 0; border-radius: 0 4px 4px 0; min-width: 2px; }
+.cmprow .prev { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--fg); opacity: .55; border-radius: 1px; }
+.cmprow .v { font: 600 13px var(--mono); font-variant-numeric: tabular-nums; display: flex; gap: 6px; align-items: center; justify-content: flex-end; min-width: 92px; }
+.legend .gl { display: inline-flex; align-items: center; }
+.legend i.sw { width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.ovlive { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 20px; align-items: center; }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--accent-soft); }
+td.game { display: flex; align-items: center; font-weight: 500; }
 .empty, .err { color: var(--muted); font-size: 13px; padding: 8px 0; }
 .err { color: var(--bad); font-family: var(--mono); font-size: 12px; word-break: break-word; }
 .note { color: var(--muted); font-size: 12px; }
@@ -125,7 +151,7 @@ td.lvl { font-family: var(--mono); }
 }
 .banner .primary { padding: 6px 14px; font-size: 13px; }
 @media (max-width: 640px) {
-  .live { grid-template-columns: 1fr; }
+  .live, .ovlive { grid-template-columns: 1fr; }
   .big { font-size: 44px; }
   .status { margin-left: 0; }
 }
@@ -160,7 +186,15 @@ td.lvl { font-family: var(--mono); }
   </div>
 
   <main id="app" hidden>
-  <section class="panel live">
+  <section class="panel ovlive" id="ovLive" hidden>
+    <div>
+      <h2>Сейчас во всех играх</h2>
+      <div class="big" id="ovRtTotal">–<small>игроков за последние 30 минут</small></div>
+    </div>
+    <div id="ovRtGames"></div>
+  </section>
+
+  <section class="panel live" id="gameLive">
     <div>
       <h2>Сейчас в игре</h2>
       <div class="big" id="rtTotal">–<small>активных за последние 30 минут</small></div>
@@ -202,11 +236,32 @@ td.lvl { font-family: var(--mono); }
     <div id="breakdowns" class="contents"></div>
     <div class="panel"><h2>События, 30 мин</h2><div class="tbl" id="rtEvents"></div></div>
     <div class="panel"><h2>Страны, 30 мин</h2><div class="tbl" id="rtCountries"></div></div>
-    <div class="panel"><h2>Ключевые события</h2><div class="tbl" id="events"></div></div>
+    <div class="panel"><h2>События игры</h2><div class="tbl" id="events"></div></div>
     <div class="panel"><h2 id="reasonsTitle">Ошибки покупок</h2><div class="tbl" id="reasons"></div></div>
     <div class="panel"><h2 id="lossesTitle">Причины проигрышей</h2><div class="tbl" id="losses"></div></div>
     <div class="panel"><h2 id="versionsTitle">Версии</h2><div class="tbl" id="versions"></div></div>
     <div class="panel"><h2 id="countriesTitle">Страны</h2><div class="tbl" id="countries"></div></div>
+  </section>
+
+  <section class="grid" id="ovCharts" hidden>
+    <div class="panel wide">
+      <h2 id="ovCmpTitle">Игры рядом</h2>
+      <p class="hint">Цветная полоса — выбранный период, тонкая чёрточка — предыдущий такой же период. Процент — изменение к нему.</p>
+      <div class="insights" id="ovInsights"></div>
+      <div class="cmpgrid" id="ovCmp"></div>
+    </div>
+    <div class="panel wide">
+      <h2 id="ovDaysTitle">Игроки по дням</h2>
+      <p class="hint">Высота столбика — все активные игроки за день, цветные куски — сколько из них в каждой игре. Наведи на кусок, чтобы увидеть число.</p>
+      <div class="legend" id="ovDaysLegend"></div>
+      <div class="chart" id="ovDays"></div>
+    </div>
+    <div class="panel wide">
+      <h2 id="ovTableTitle">Сводка по играм</h2>
+      <p class="hint">Нажми на строку, чтобы открыть игру.</p>
+      <div class="tbl" id="ovTable"></div>
+      <p class="note" id="ovNote"></p>
+    </div>
   </section>
   </main>
 </div>
@@ -217,7 +272,7 @@ td.lvl { font-family: var(--mono); }
 <script>
 const RT_EVERY = 60e3, REPORTS_EVERY = 300e3;
 // Events where growth is bad news - their delta pill flips colour.
-const BAD_EVENTS = new Set(['app_remove', 'purchase_failed', 'level_failed']);
+const BAD_EVENTS = new Set(['app_remove', 'purchase_failed', 'level_failed', 'level_fail', 'level_lose', 'run_quit']);
 const PERIODS = {
   today:     {btn: 'Сегодня', title: 'Сегодня', cur: 'сегодня', prev: 'вчера', col: 'Вчера', where: 'сегодня'},
   yesterday: {btn: 'Вчера', title: 'Вчера', cur: 'вчера', prev: 'позавчера', col: 'Позавч.', where: 'вчера'},
@@ -230,7 +285,21 @@ const num = v => Number(v) || 0;
 const fmt = v => num(v).toLocaleString('ru-RU', {maximumFractionDigits: 1});
 const dur = s => { s = Math.round(num(s)); return s >= 60 ? Math.floor(s / 60) + 'м ' + String(s % 60).padStart(2, '0') + 'с' : s + 'с'; };
 
+// The first tab: every game side by side.
+const ALL = 'all';
+const ms = v => num(v) >= 1000 ? (num(v) / 1000).toLocaleString('ru-RU', {maximumFractionDigits: 1}) + ' с' : Math.round(num(v)) + ' мс';
+
 let props = [], current = null, period = 'today', lastRt = 0, lastError = '';
+
+// Games in config.js > titles order first; each keeps its colour everywhere.
+function orderProps(list) {
+  const T = window.GAME_PULSE.titles || [], order = T.map(t => t[0]), name = Object.fromEntries(T);
+  const rank = p => order.includes(p.id) ? order.indexOf(p.id) : order.length;
+  return list.map(p => Object.assign({}, p, {name: name[p.id] || p.name}))
+    .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+}
+const colorOf = id => `var(--c${props.findIndex(p => p.id === id) % 8 + 1})`;
+const swatch = id => `<i class="sw" style="background:${colorOf(id)}"></i>`;
 
 function store(k, v) { try { if (v !== undefined) localStorage.setItem(k, v); return localStorage.getItem(k); } catch { return null; } }
 
@@ -251,7 +320,7 @@ function setStatus() {
 }
 
 function renderTabs() {
-  $('tabs').innerHTML = props.map(p =>
+  $('tabs').innerHTML = `<button type="button" data-id="${ALL}" aria-pressed="${current === ALL}">Все игры</button>` + props.map(p =>
     `<button type="button" data-id="${esc(p.id)}" aria-pressed="${p.id === current}" title="${esc(p.account)} · ${esc(p.id)}">${esc(p.name)}</button>`).join('');
   $('tabs').querySelectorAll('button').forEach(b => b.onclick = () => select(b.dataset.id));
 }
@@ -267,6 +336,9 @@ function renderPeriods() {
   $('versionsTitle').textContent = 'Версии ' + P.where;
   $('levelsTitle').textContent = 'Прохождение уровней ' + P.where;
   $('countriesTitle').textContent = 'Страны ' + P.where;
+  $('ovCmpTitle').textContent = 'Игры рядом ' + P.where;
+  $('ovTableTitle').textContent = 'Сводка по играм ' + P.where;
+  if (current === ALL) $('periodTitle').textContent = 'Все игры вместе · ' + P.title;
   $('hoursPanel').hidden = !(period === 'today' || period === 'yesterday');
   $('hoursCur').textContent = P.cur;
   $('hoursPrev').textContent = P.prev;
@@ -274,7 +346,12 @@ function renderPeriods() {
 
 function select(id) {
   current = id; store('gp.property', id); renderTabs();
-  loadRealtime(); loadReports();
+  const all = id === ALL;
+  $('ovLive').hidden = !all; $('ovCharts').hidden = !all;
+  $('gameLive').hidden = all; $('charts').hidden = all;
+  renderPeriods();
+  if (all) loadOverview();
+  else { loadRealtime(); loadReports(); }
 }
 
 function setPeriod(p) {
@@ -381,6 +458,7 @@ function delta(t, y, badWhenUp) {
 
 async function loadRealtime() {
   if (!current) return;
+  if (current === ALL) return loadOverview();
   const id = current;
   try {
     const d = await GA4.realtime(id);
@@ -398,6 +476,7 @@ async function loadRealtime() {
 
 async function loadReports() {
   if (!current) return;
+  if (current === ALL) return loadOverview();
   const id = current, p = period;
   document.body.classList.add('loading');
   try {
@@ -451,11 +530,14 @@ function renderReports(d) {
 
   if (d.events.error) $('events').innerHTML = `<div class="err">${esc(d.events.error)}</div>`;
   else {
-    const names = Object.keys(ev).sort((a, b) => evc(b, 't') - evc(a, 't'));
+    // All of the game's own events, busiest first; GA4's automatic ones hidden.
+    const C = window.GAME_PULSE, hidden = new Set(C.hiddenEvents || []), about = C.events || {};
+    const names = Object.keys(ev).filter(n => !hidden.has(n)).sort((a, b) => evc(b, 't') - evc(a, 't') || evc(b, 'y') - evc(a, 'y'));
     const cap = s => s[0].toUpperCase() + s.slice(1);
+    const label = n => about[n] ? `${esc(about[n])}<small>${esc(n)}</small>` : esc(n);
     $('events').innerHTML = names.length ? `<table><thead><tr><th>Событие</th><th class="n">${cap(P.cur)}</th><th class="n">Игроков</th><th class="n" title="${P.prev}">${P.col}</th><th></th></tr></thead><tbody>` +
-      names.map(n => `<tr><td>${esc(n)}</td><td class="n">${fmt(evc(n, 't'))}</td><td class="n">${fmt(((ev[n].t) || {}).totalUsers)}</td><td class="n">${fmt(evc(n, 'y'))}</td><td class="n">${delta(evc(n, 't'), evc(n, 'y'), BAD_EVENTS.has(n))}</td></tr>`).join('') +
-      '</tbody></table>' : '<div class="empty">Ключевых событий нет</div>';
+      names.map(n => `<tr><td class="ev">${label(n)}</td><td class="n">${fmt(evc(n, 't'))}</td><td class="n">${fmt(((ev[n].t) || {}).totalUsers)}</td><td class="n">${fmt(evc(n, 'y'))}</td><td class="n">${delta(evc(n, 't'), evc(n, 'y'), BAD_EVENTS.has(n))}</td></tr>`).join('') +
+      '</tbody></table>' : '<div class="empty">Событий нет</div>';
   }
   // One GA4 report, split by event: a lost level is normal gameplay, not an
   // error, so it gets its own panel instead of sitting under "errors".
@@ -610,7 +692,7 @@ function renderLevels(d, game) {
       if (game.win) s += `<td class="n">${fmt(won)}</td><td class="n">${st.startU ? pct(won, st.startU) + '%' : '–'}</td>`;
       if (game.lose) s += `<td class="n">${fmt(st.loses)}</td>`;
       (game.cols || []).forEach(c => s += `<td class="n">${fmt(st.cols[c.event] || 0)}</td>`);
-      (game.avgs || []).forEach((a, i) => { const v = st.avgs[i]; s += `<td class="n">${v == null ? '–' : a.fmt === 'dur' ? dur(v) : fmt(v)}</td>`; });
+      (game.avgs || []).forEach((a, i) => { const v = st.avgs[i]; s += `<td class="n">${v == null ? '–' : a.fmt === 'dur' ? dur(v) : a.fmt === 'ms' ? ms(v) : fmt(v)}</td>`; });
       s += `<td style="width:18%"><div class="bar" title="${Math.round(reach * 100)}%"><span style="width:${reach * 100}%"></span></div></td></tr>`;
     });
     $('levelsTable').innerHTML = s + '</tbody></table>';
@@ -623,9 +705,171 @@ function renderLevels(d, game) {
 
   // rows without the param are old events from before it was registered
   const known = (rep, k) => rep && rep.rows ? Object.assign({}, rep, {rows: rep.rows.filter(r => r[k] && r[k] !== '(not set)')}) : rep;
+  // A param not yet registered in GA4 > Custom definitions: say so instead of a raw API error.
+  const unregistered = (rep, b) => rep && rep.error && /is not a valid (dimension|metric)/.test(rep.error)
+    ? `<div class="empty">Параметр <code>${esc(b.dim)}</code> события <code>${esc(b.event)}</code> ещё не зарегистрирован в GA4 (Admin → Custom definitions). Данные появятся со дня регистрации.</div>` : null;
   $('breakdowns').innerHTML = (game.breakdowns || []).map((b, i) =>
-    `<div class="panel"><h2>${esc(b.t)}</h2><div class="tbl">${table(known(d['lv_br' + i], CD(b.dim)), [{t: b.col, k: CD(b.dim)}, {t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1}],
-      {bar: 'eventCount', empty: 'Пока ничего — данные идут с ' + C.levelsSince})}</div></div>`).join('');
+    `<div class="panel"><h2>${esc(b.t)}</h2><div class="tbl">${unregistered(d['lv_br' + i], b) || table(known(d['lv_br' + i], CD(b.dim)), [{t: b.col, k: CD(b.dim)}, {t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1}],
+      {bar: 'eventCount', empty: 'Пока ничего за этот период'})}</div></div>`).join('');
+}
+
+// ---------------------------------------------------------------- all games
+
+async function loadOverview() {
+  if (current !== ALL || !props.length) return;
+  const p = period;
+  document.body.classList.add('loading');
+  try {
+    const d = await GA4.overview(props.map(x => x.id), p);
+    if (current !== ALL || p !== period) return;
+    lastError = ''; lastRt = Date.now();
+    $('expired').hidden = true;
+    renderOverview(d);
+    setStatus();
+  } catch (e) { fail(e); }
+  finally { if (current === ALL && p === period) document.body.classList.remove('loading'); }
+}
+
+// One row per game with everything the overview shows.
+function gameRows(d) {
+  return props.map(p => {
+    const g = d.games[p.id] || {}, tot = byRange(g.totals), T = tot.cur[0] || {}, Y = tot.prev[0] || {};
+    const evR = byRange(g.events), ev = w => name => num((evR[w].find(r => r.eventName === name) || {}).eventCount);
+    const side = (R, w) => {
+      const e = ev(w), a = num(R.activeUsers);
+      return {
+        active: a, fresh: num(R.newUsers), sessions: num(R.sessions), eng: num(R.userEngagementDuration),
+        time: a ? num(R.userEngagementDuration) / a : 0,
+        removes: e('app_remove'), installs: e('first_open'), levels: e('level_start'),
+        levelsPer: a ? e('level_start') / a : 0, sessPer: a ? num(R.sessions) / a : 0,
+        buys: e('purchase') + e('in_app_purchase') + e('remove_ads_bought'),
+      };
+    };
+    const rt = g.rt_total && !g.rt_total.error ? num(((g.rt_total.rows || [])[0] || {}).activeUsers) : 0;
+    const err = (g.totals && g.totals.error) || '';
+    return {id: p.id, name: p.name, t: side(T, 'cur'), y: side(Y, 'prev'), rt, err, days: (g.days && g.days.rows) || []};
+  });
+}
+
+// Horizontal bars, one per game, longest first: this period as a coloured bar,
+// the previous one as a thin tick, value and change on the right.
+function cmpList(title, hint, rows, key, f, badWhenUp) {
+  const live = rows.filter(r => r.t[key] || r.y[key]).sort((a, b) => b.t[key] - a.t[key]);
+  const max = Math.max(1e-9, ...live.map(r => Math.max(r.t[key], r.y[key])));
+  let s = `<div class="cmp"><h3>${title}</h3><p class="hint">${hint}</p>`;
+  if (!live.length) return s + '<div class="empty">Пока ничего</div></div>';
+  live.forEach(r => {
+    const v = r.t[key], y = r.y[key];
+    s += `<div class="cmprow" title="${esc(r.name)}: ${f(v)} (было ${f(y)})"><span class="name">${swatch(r.id)}${esc(r.name)}</span>` +
+      `<span class="track"><span class="fill" style="width:${v / max * 100}%;background:${colorOf(r.id)}"></span>` +
+      `<span class="prev" style="left:calc(${y / max * 100}% - 1px)"></span></span>` +
+      `<span class="v">${f(v)}${delta(v, y, badWhenUp)}</span></div>`;
+  });
+  return s + '</div>';
+}
+
+// Active players per day, one stacked bar per day, a coloured piece per game.
+function stackedDays(rows, dates, inPeriod) {
+  const games = rows.filter(r => r.days.some(x => num(x.activeUsers)));
+  const val = (g, date) => num((g.days.find(x => x.date === date) || {}).activeUsers);
+  const totals = dates.map(date => games.reduce((s, g) => s + val(g, date), 0));
+  const W = 900, H = 170, L = 30, B = 20, n = dates.length;
+  const top = niceMax(Math.max(1, ...totals) * 1.15);
+  const bw = (W - L) / n, yy = v => 14 + (H - 14) * (1 - v / top);
+  const labelEvery = Math.ceil(n / 8), gap = n > 20 ? 2 : 4;
+  let s = `<svg viewBox="0 0 ${W} ${H + B}" role="img" aria-label="Активные игроки по дням по играм">`;
+  [0, .5, 1].forEach(f => {
+    const v = Math.round(top * f);
+    s += `<line x1="${L}" x2="${W}" y1="${yy(v)}" y2="${yy(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${yy(v) + 3}" text-anchor="end">${v}</text>`;
+  });
+  dates.forEach((date, i) => {
+    const x0 = L + i * bw + gap, w = Math.max(1, bw - gap * 2), dd = `${date.slice(6)}.${date.slice(4, 6)}`;
+    let acc = 0;
+    s += `<g opacity="${inPeriod.has(date) ? 1 : .35}">`;
+    games.forEach(g => {
+      const v = val(g, date);
+      if (!v) return;
+      const y1 = yy(acc + v), y0 = yy(acc);
+      // 2px panel-coloured stroke separates the pieces of one stack
+      s += `<rect x="${x0}" y="${y1}" width="${w}" height="${Math.max(1, y0 - y1)}" fill="${colorOf(g.id)}" stroke="var(--panel)" stroke-width="1"><title>${dd} · ${esc(g.name)}: ${v} игроков (всего ${totals[i]})</title></rect>`;
+      acc += v;
+    });
+    if (totals[i] && n <= 20) s += `<text x="${x0 + w / 2}" y="${yy(totals[i]) - 4}" text-anchor="middle" style="fill:var(--fg)">${totals[i]}</text>`;
+    s += '</g>';
+    if ((n - 1 - i) % labelEvery === 0) s += `<text x="${x0 + w / 2}" y="${H + 15}" text-anchor="middle">${dd}</text>`;
+  });
+  return {svg: s + '</svg>', games};
+}
+
+function renderOverview(d) {
+  const P = PERIODS[d.period] || PERIODS.today;
+  const rows = gameRows(d);
+  const sum = (w, k) => rows.reduce((s, r) => s + r[w][k], 0);
+
+  // Live: everyone playing right now, split by game.
+  const rtTotal = rows.reduce((s, r) => s + r.rt, 0), rtMax = Math.max(1, ...rows.map(r => r.rt));
+  $('ovRtTotal').firstChild.nodeValue = String(rtTotal);
+  $('ovRtGames').innerHTML = rows.filter(r => r.rt).sort((a, b) => b.rt - a.rt).map(r =>
+    `<div class="cmprow"><span class="name">${swatch(r.id)}${esc(r.name)}</span><span class="track"><span class="fill" style="width:${r.rt / rtMax * 100}%;background:${colorOf(r.id)}"></span></span><span class="v">${r.rt}</span></div>`).join('')
+    || '<div class="empty">Сейчас никто не играет</div>';
+
+  // Tiles: all games added up.
+  const timeAll = w => sum(w, 'active') ? sum(w, 'eng') / sum(w, 'active') : 0;
+  const tiles = [
+    ['Активные игроки', sum('t', 'active'), sum('y', 'active'), fmt],
+    ['Новые игроки', sum('t', 'fresh'), sum('y', 'fresh'), fmt],
+    ['Сессии', sum('t', 'sessions'), sum('y', 'sessions'), fmt],
+    ['Время на игрока', timeAll('t'), timeAll('y'), dur],
+    ['Начато уровней', sum('t', 'levels'), sum('y', 'levels'), fmt],
+    ['Удаления', sum('t', 'removes'), sum('y', 'removes'), fmt, true],
+    ['Покупки', sum('t', 'buys'), sum('y', 'buys'), fmt],
+    ['Игр с игроками', rows.filter(r => r.t.active).length, rows.filter(r => r.y.active).length, fmt],
+  ];
+  $('tiles').innerHTML = tiles.map(([label, t, y, f, bad]) =>
+    `<div class="tile"><span class="label">${label}</span><span class="val">${f(t)}</span>` +
+    `<span class="sub">${delta(t, y, bad)}${P.prev} ${f(y)}</span></div>`).join('');
+
+  // Plain-words headlines.
+  const live = rows.filter(r => r.t.active);
+  const cards = [];
+  const best = [...live].sort((a, b) => b.t.active - a.t.active)[0];
+  if (best) cards.push(['', `${best.name}: ${fmt(best.t.active)}`, `больше всего игроков ${P.where}`]);
+  const grow = live.filter(r => r.y.active >= 5).map(r => Object.assign({g: r.t.active / r.y.active - 1}, r)).sort((a, b) => b.g - a.g);
+  if (grow.length && grow[0].g > 0) cards.push(['', `${grow[0].name}: +${Math.round(grow[0].g * 100)}%`, `быстрее всех растёт (было ${fmt(grow[0].y.active)} игроков)`]);
+  if (grow.length && grow[grow.length - 1].g < 0) { const r = grow[grow.length - 1]; cards.push(['bad', `${r.name}: ${Math.round(r.g * 100)}%`, `сильнее всех просела (было ${fmt(r.y.active)} игроков)`]); }
+  const churn = live.filter(r => r.t.installs >= 10).map(r => Object.assign({c: r.t.removes / r.t.installs}, r)).sort((a, b) => b.c - a.c)[0];
+  if (churn && churn.c > 0) cards.push(['warn', `${churn.name}: ${Math.round(churn.c * 100)} из 100`, 'больше всего удалений на установку']);
+  const deep = [...live].filter(r => r.t.active >= 5).sort((a, b) => b.t.time - a.t.time)[0];
+  if (deep) cards.push(['', `${deep.name}: ${dur(deep.t.time)}`, 'дольше всех играют (в среднем на игрока)']);
+  $('ovInsights').innerHTML = cards.map(([cls, b, t]) => `<div class="insight ${cls}"><b>${esc(b)}</b><span>${t}</span></div>`).join('');
+
+  $('ovCmp').innerHTML = [
+    cmpList('Активные игроки', 'Сколько разных людей заходили в игру', rows, 'active', fmt),
+    cmpList('Новые игроки', 'Впервые открыли игру — по сути установки', rows, 'fresh', fmt),
+    cmpList('Время на игрока', 'Сколько в среднем один игрок провёл в игре за период', rows, 'time', dur),
+    cmpList('Уровней на игрока', 'Сколько уровней (забегов, треков) в среднем начинает один игрок', rows, 'levelsPer', fmt),
+    cmpList('Удаления', 'Сколько раз игру удалили. Рост — плохо', rows, 'removes', fmt, true),
+  ].join('');
+
+  const {svg, games} = stackedDays(rows, d.chart_days, new Set(d.period_days));
+  $('ovDaysTitle').textContent = 'Игроки по дням, ' + d.chart_days.length + ' дней';
+  $('ovDaysLegend').innerHTML = games.map(g => `<span class="gl">${swatch(g.id)}${esc(g.name)}</span>`).join('') +
+    (d.period === 'month' ? '' : '<span>яркие столбцы — выбранный период</span>');
+  $('ovDays').innerHTML = games.length ? svg : '<div class="empty">Пока ничего</div>';
+
+  // Summary table, busiest game first; a row opens that game's tab.
+  const sorted = [...rows].sort((a, b) => b.t.active - a.t.active || b.rt - a.rt);
+  const per100 = r => r.t.installs ? Math.round(r.t.removes / r.t.installs * 100) : null;
+  $('ovTable').innerHTML = `<table><thead><tr><th>Игра</th><th class="n" title="за последние 30 минут">Сейчас</th><th class="n">Активные</th><th></th><th class="n">Новые</th><th class="n">Удаления</th><th class="n" title="удалений на 100 установок за период">На 100 уст.</th><th class="n">Сессий на игрока</th><th class="n">Время на игрока</th><th class="n">Уровней на игрока</th></tr></thead><tbody>` +
+    sorted.map(r => r.err
+      ? `<tr><td class="game">${swatch(r.id)}${esc(r.name)}</td><td colspan="9" class="err">${esc(r.err)}</td></tr>`
+      : `<tr class="click" data-id="${esc(r.id)}"><td class="game">${swatch(r.id)}${esc(r.name)}</td><td class="n">${fmt(r.rt)}</td><td class="n">${fmt(r.t.active)}</td><td class="n">${delta(r.t.active, r.y.active)}</td>` +
+        `<td class="n">${fmt(r.t.fresh)}</td><td class="n">${fmt(r.t.removes)}</td><td class="n">${per100(r) == null ? '–' : per100(r)}</td>` +
+        `<td class="n">${fmt(r.t.sessPer)}</td><td class="n">${dur(r.t.time)}</td><td class="n">${fmt(r.t.levelsPer)}</td></tr>`).join('') + '</tbody></table>';
+  $('ovTable').querySelectorAll('tr.click').forEach(tr => tr.onclick = () => select(tr.dataset.id));
+  const quiet = rows.filter(r => !r.t.active && !r.y.active && !r.err).map(r => r.name);
+  $('ovNote').textContent = 'Активные во всех играх — сумма по играм: человек, игравший в две игры, посчитан дважды. ' +
+    (quiet.length ? 'Без игроков за период: ' + quiet.join(', ') + '.' : '');
 }
 
 let started = false;
@@ -635,10 +879,10 @@ async function start() {
   $('signin').hidden = true; $('expired').hidden = true;
   $('app').hidden = false; $('status').hidden = false; $('refresh').hidden = false; $('signout').hidden = false;
   try {
-    props = await GA4.properties();
+    props = orderProps(await GA4.properties());
     if (!props.length) { lastError = 'у этого Google-аккаунта нет доступа ни к одному GA4-ресурсу'; setStatus(); return; }
-    const saved = store('gp.property');
-    select(props.some(x => x.id === (current || saved)) ? (current || saved) : props[0].id);
+    const want = current || store('gp.property');
+    select(want === ALL || props.some(x => x.id === want) ? want : ALL);
   } catch (e) { fail(e); }
   if (started) return;
   started = true;
