@@ -43,7 +43,7 @@ Local run: `python -m http.server 8000`, then open http://localhost:8000/.
   ones hidden), with a plain-words description from `config.js > events`.
   A new event shows up by itself; add a line there to describe it.
 - A breakdown whose param isn't registered in GA4 says so on the page instead
-  of failing. Not registered yet: Lift 13 `from`, `code`, `step`.
+  of failing. Lift 13 `from`, `code`, `step` were registered 25.10.2026.
 - A Google token lasts an hour; after that the page shows "Войти снова".
   With the consent screen in Testing mode Google may also ask to sign in
   again after 7 days.
