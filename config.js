@@ -60,6 +60,9 @@ window.GAME_PULSE = {
     purchase: 'Купил',
     in_app_purchase: 'Купил',
     purchase_failed: 'Покупка не прошла',
+    ad_shown: 'Увидел рекламу',
+    ad_skipped: 'Реклама не показалась (причина в разбивке)',
+    update_prompt: 'Показали экран «вышла новая версия»',
     iap_click: 'Нажал на товар',
     iap_grant: 'Получил купленное',
     remove_ads_tap: 'Нажал «убрать рекламу»',
@@ -131,6 +134,8 @@ window.GAME_PULSE = {
         {event: 'begin_checkout', dim: 'product_id', t: 'Нажатия на покупки', col: 'Товар'},
         {event: 'perk_pick', dim: 'perk_id', t: 'Какие перки выбирают', col: 'Перк'},
         {event: 'chest_open', dim: 'chapter', t: 'Сундуки по главам', col: 'Глава'},
+        {event: 'ad_shown', dim: 'ad_format', t: 'Показы рекламы', col: 'Формат'},
+        {event: 'ad_skipped', dim: 'reason', t: 'Почему реклама не показалась', col: 'Причина'},
       ],
     },
     '549388633': { // candy-girl
