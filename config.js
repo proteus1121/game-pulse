@@ -88,6 +88,7 @@ window.GAME_PULSE = {
     camera_reboot: 'Перезагрузил камеру',
     chat_reply: 'Ответил в чате',
     night_quit: 'Бросил ночь из паузы',
+    night_continue: 'Продолжил проигранную ночь',
     quality_drop: 'Графика сама понизилась (мало FPS)',
     booster: 'Использовал бустер',
     boost_used: 'Использовал бустер',
@@ -169,7 +170,8 @@ window.GAME_PULSE = {
     '561653748': { // radionyanya (Baby Monitor)
       level: 'level_name', start: 'level_start', win: 'level_end', lose: 'level_end', outcome: 'success',
       cols: [{event: 'anomaly_found', t: 'Нашли аномалий'}, {event: 'anomaly_missed', t: 'Пропустили'}, {event: 'false_alarm', t: 'Ложные тревоги'},
-             {event: 'kid_lost', t: 'Соня ушла'}, {event: 'battery_dead', t: 'Сел телефон'}, {event: 'night_quit', t: 'Бросили'}],
+             {event: 'kid_lost', t: 'Соня ушла'}, {event: 'battery_dead', t: 'Сел телефон'}, {event: 'night_quit', t: 'Бросили'},
+             {event: 'night_continue', t: 'Продолжили'}, {event: 'ad_interstitial', t: 'Реклам'}],
       avgs: [{event: 'level_end', metric: 'time', t: 'Длина ночи', fmt: 'dur'},
              {event: 'anomaly_found', metric: 'ms', t: 'Реакция на аномалию', fmt: 'ms'}],
       breakdowns: [
@@ -182,7 +184,10 @@ window.GAME_PULSE = {
         {event: 'camera_fixed', dim: 'fault', t: 'Починенные камеры', col: 'Поломка'},
         {event: 'level_start', dim: 'monster', t: 'Монстры', col: 'Монстр'},
         {event: 'night_quit', dim: 'hour', t: 'В котором часу бросают', col: 'Час'},
+        {event: 'remove_ads_tap', dim: 'from', t: 'Откуда жмут «убрать рекламу»', col: 'Откуда'},
         {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play', col: 'Код'},
+        {event: 'ad_interstitial', dim: 'from', t: 'Межуровневая реклама: где', col: 'Где'},
+        {event: 'night_continue', dim: 'reason', t: 'Продолжения: после чего', col: 'Причина'},
       ],
     },
     '559461409': { // lift-13
