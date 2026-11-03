@@ -502,7 +502,7 @@ function renderReports(d) {
   evR.cur.forEach(r => { (ev[r.eventName] ||= {}).t = r; });
   evR.prev.forEach(r => { (ev[r.eventName] ||= {}).y = r; });
   const evc = (name, w) => num(((ev[name] || {})[w] || {}).eventCount);
-  const purch = w => evc('purchase', w) + evc('in_app_purchase', w);
+  const purch = w => evc('purchase', w) + evc('in_app_purchase', w) + evc('remove_ads_bought', w) + evc('iap_bought', w);
   const perUser = r => num(r.activeUsers) ? num(r.userEngagementDuration) / num(r.activeUsers) : 0;
 
   const tiles = [
@@ -742,7 +742,7 @@ function gameRows(d) {
         time: a ? num(R.userEngagementDuration) / a : 0,
         removes: e('app_remove'), installs: e('first_open'), levels: e('level_start'),
         levelsPer: a ? e('level_start') / a : 0, sessPer: a ? num(R.sessions) / a : 0,
-        buys: e('purchase') + e('in_app_purchase') + e('remove_ads_bought'),
+        buys: e('purchase') + e('in_app_purchase') + e('remove_ads_bought') + e('iap_bought'),
       };
     };
     const rt = g.rt_total && !g.rt_total.error ? num(((g.rt_total.rows || [])[0] || {}).activeUsers) : 0;

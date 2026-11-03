@@ -28,7 +28,7 @@ window.GAME_PULSE = {
   ],
 
   // Counted per game on the "all games" tab.
-  overviewEvents: ['first_open', 'app_remove', 'level_start', 'purchase', 'in_app_purchase', 'remove_ads_bought'],
+  overviewEvents: ['first_open', 'app_remove', 'level_start', 'purchase', 'in_app_purchase', 'remove_ads_bought', 'iap_bought'],
 
   // GA4's automatic events: left out of the per-game events table.
   hiddenEvents: ['screen_view', 'user_engagement', 'session_start', 'app_clear_data', 'app_update',
@@ -66,6 +66,8 @@ window.GAME_PULSE = {
     update_prompt: 'Показали экран «вышла новая версия»',
     iap_click: 'Нажал на товар',
     iap_grant: 'Получил купленное',
+    iap_result: 'Ответ Google Play на покупку (не купил)',
+    iap_bought: 'Купил (подтвердил Google Play)',
     remove_ads_tap: 'Нажал «убрать рекламу»',
     remove_ads_click: 'Нажал «убрать рекламу»',
     remove_ads_result: 'Ответ Google Play на покупку',
@@ -133,6 +135,9 @@ window.GAME_PULSE = {
         {event: 'house_build', dim: 'room', t: 'Котодом: построенные комнаты', col: 'Комната'},
         {event: 'house_upgrade', dim: 'room', t: 'Котодом: улучшения комнат', col: 'Комната'},
         {event: 'iap_click', dim: 'id', t: 'Нажатия на покупки', col: 'Товар'},
+        {event: 'iap_result', dim: 'code', t: 'Покупки: ответ Play', col: 'Код'},
+        {event: 'iap_result', dim: 'id', t: 'Несостоявшиеся покупки по товарам', col: 'Товар'},
+        {event: 'iap_bought', dim: 'id', t: 'Купленные товары', col: 'Товар'},
       ],
     },
     '549814421': { // booma-balls
