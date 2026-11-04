@@ -431,7 +431,7 @@ function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); return 
 
 // ---------------------------------------------------------------- tables
 
-// "1" -> "1 · Отменил сам" when the value has a plain-words name in config.js > valueLabels
+// "USER_CANCELED" -> "USER_CANCELED · Отменил сам" when the value has a plain-words name in config.js > valueLabels
 function label(v, map) { const m = map && (window.GAME_PULSE.valueLabels || {})[map]; return m && m[v] ? `${v} · ${m[v]}` : v; }
 
 function table(rep, cols, opts = {}) {
