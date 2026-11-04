@@ -112,6 +112,26 @@ window.GAME_PULSE = {
     unlock_achievement: 'Получил достижение',
   },
 
+  // Plain-words names for param values; a breakdown picks a set with `labels: '<set>'`.
+  valueLabels: {
+    // Google Play Billing BillingResponseCode
+    play: {
+      '0': 'Купил (OK)',
+      '1': 'Отменил сам',
+      '2': 'Нет связи с Play',
+      '3': 'Оплата недоступна на устройстве',
+      '4': 'Товар недоступен',
+      '5': 'Ошибка разработчика (настройка товара)',
+      '6': 'Ошибка Play',
+      '7': 'Уже куплено',
+      '8': 'Не куплено (нечего подтверждать)',
+      '12': 'Ошибка сети',
+      '-1': 'Сервис Play отключился',
+      '-2': 'Функция не поддерживается',
+      '-3': 'Play не ответил вовремя',
+    },
+  },
+
   // Per game (GA4 property id): which events and custom dimensions make up the
   // level funnel. Every name here must be registered in GA4 > Custom definitions
   // (event params are only reported from the day they were registered).
@@ -135,7 +155,7 @@ window.GAME_PULSE = {
         {event: 'house_build', dim: 'room', t: 'Котодом: построенные комнаты', col: 'Комната'},
         {event: 'house_upgrade', dim: 'room', t: 'Котодом: улучшения комнат', col: 'Комната'},
         {event: 'iap_click', dim: 'id', t: 'Нажатия на покупки', col: 'Товар'},
-        {event: 'iap_result', dim: 'code', t: 'Покупки: ответ Play', col: 'Код'},
+        {event: 'iap_result', dim: 'code', t: 'Покупки: ответ Play', col: 'Код', labels: 'play'},
         {event: 'iap_result', dim: 'id', t: 'Несостоявшиеся покупки по товарам', col: 'Товар'},
         {event: 'iap_bought', dim: 'id', t: 'Купленные товары', col: 'Товар'},
       ],
@@ -190,7 +210,7 @@ window.GAME_PULSE = {
         {event: 'level_start', dim: 'monster', t: 'Монстры', col: 'Монстр'},
         {event: 'night_quit', dim: 'hour', t: 'В котором часу бросают', col: 'Час'},
         {event: 'remove_ads_tap', dim: 'from', t: 'Откуда жмут «убрать рекламу»', col: 'Откуда'},
-        {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play', col: 'Код'},
+        {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play', col: 'Код', labels: 'play'},
         {event: 'ad_interstitial', dim: 'from', t: 'Межуровневая реклама: где', col: 'Где'},
         {event: 'night_continue', dim: 'reason', t: 'Продолжения: после чего', col: 'Причина'},
       ],
@@ -209,7 +229,7 @@ window.GAME_PULSE = {
         {event: 'level_end', dim: 'floor', t: 'На каком этаже проигрывают', col: 'Этаж'},
         {event: 'run_quit', dim: 'floor', t: 'На каком этаже бросают забег', col: 'Этаж'},
         {event: 'remove_ads_tap', dim: 'from', t: 'Откуда жмут «убрать рекламу»', col: 'Откуда'},
-        {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play', col: 'Код'},
+        {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play', col: 'Код', labels: 'play'},
         {event: 'ad_interstitial', dim: 'from', t: 'Межуровневая реклама: где', col: 'Где'},
       ],
     },

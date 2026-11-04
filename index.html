@@ -431,6 +431,9 @@ function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); return 
 
 // ---------------------------------------------------------------- tables
 
+// "1" -> "1 · Отменил сам" when the value has a plain-words name in config.js > valueLabels
+function label(v, map) { const m = map && (window.GAME_PULSE.valueLabels || {})[map]; return m && m[v] ? `${v} · ${m[v]}` : v; }
+
 function table(rep, cols, opts = {}) {
   if (!rep) return '<div class="empty">–</div>';
   if (rep.error) return `<div class="err">${esc(rep.error)}</div>`;
@@ -439,7 +442,7 @@ function table(rep, cols, opts = {}) {
   const barKey = opts.bar, max = barKey ? Math.max(1, ...rows.map(r => num(r[barKey]))) : 0;
   let s = '<table><thead><tr>' + cols.map(c => `<th class="${c.n ? 'n' : ''}">${c.t}</th>`).join('') + (barKey ? '<th></th>' : '') + '</tr></thead><tbody>';
   rows.forEach(r => {
-    s += '<tr>' + cols.map(c => `<td class="${c.n ? 'n' : ''} ${c.cls || ''}">${c.n ? fmt(r[c.k]) : esc(r[c.k] || '(not set)')}</td>`).join('');
+    s += '<tr>' + cols.map(c => `<td class="${c.n ? 'n' : ''} ${c.cls || ''}">${c.n ? fmt(r[c.k]) : esc(label(r[c.k] || '(not set)', c.map))}</td>`).join('');
     if (barKey) s += `<td style="width:30%"><div class="bar"><span style="width:${num(r[barKey]) / max * 100}%"></span></div></td>`;
     s += '</tr>';
   });
@@ -709,7 +712,7 @@ function renderLevels(d, game) {
   const unregistered = (rep, b) => rep && rep.error && /is not a valid (dimension|metric)/.test(rep.error)
     ? `<div class="empty">Параметр <code>${esc(b.dim)}</code> события <code>${esc(b.event)}</code> ещё не зарегистрирован в GA4 (Admin → Custom definitions). Данные появятся со дня регистрации.</div>` : null;
   $('breakdowns').innerHTML = (game.breakdowns || []).map((b, i) =>
-    `<div class="panel"><h2>${esc(b.t)}</h2><div class="tbl">${unregistered(d['lv_br' + i], b) || table(known(d['lv_br' + i], CD(b.dim)), [{t: b.col, k: CD(b.dim)}, {t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1}],
+    `<div class="panel"><h2>${esc(b.t)}</h2><div class="tbl">${unregistered(d['lv_br' + i], b) || table(known(d['lv_br' + i], CD(b.dim)), [{t: b.col, k: CD(b.dim), map: b.labels}, {t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1}],
       {bar: 'eventCount', empty: 'Пока ничего за этот период'})}</div></div>`).join('');
 }
 
