@@ -176,7 +176,9 @@
       out['lv_avg' + i] = rep([cd(game.level)], ['eventCount', cd(a.metric)], ranges, eventIs(a.event), {limit: 1000});
     });
     (game.breakdowns || []).forEach((b, i) => {
-      out['lv_br' + i] = rep([cd(b.dim)], ['eventCount', 'totalUsers'], ranges, eventIs(b.event), Object.assign({limit: 15}, top('eventCount')));
+      // scope 'user': a user property (e.g. store = play / huawei) instead of an event param
+      const dim = b.scope === 'user' ? 'customUser:' + b.dim : cd(b.dim);
+      out['lv_br' + i] = rep([dim], ['eventCount', 'totalUsers'], ranges, eventIs(b.event), Object.assign({limit: 15}, top('eventCount')));
     });
     return out;
   }

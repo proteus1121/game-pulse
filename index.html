@@ -562,6 +562,8 @@ function renderReports(d) {
 // ---------------------------------------------------------------- levels
 
 const CD = name => 'customEvent:' + name;
+// a breakdown's GA4 dimension: an event param, or a user property with scope: 'user'
+const BD = b => b.scope === 'user' ? 'customUser:' + b.dim : CD(b.dim);
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 
 // Folds the funnel report into one row per level. Events sent before the
@@ -710,9 +712,9 @@ function renderLevels(d, game) {
   const known = (rep, k) => rep && rep.rows ? Object.assign({}, rep, {rows: rep.rows.filter(r => r[k] && r[k] !== '(not set)')}) : rep;
   // A param not yet registered in GA4 > Custom definitions: say so instead of a raw API error.
   const unregistered = (rep, b) => rep && rep.error && /is not a valid (dimension|metric)/.test(rep.error)
-    ? `<div class="empty">Параметр <code>${esc(b.dim)}</code> события <code>${esc(b.event)}</code> ещё не зарегистрирован в GA4 (Admin → Custom definitions). Данные появятся со дня регистрации.</div>` : null;
+    ? `<div class="empty">${b.scope === 'user' ? 'Свойство пользователя' : 'Параметр'} <code>${esc(b.dim)}</code> ${b.scope === 'user' ? 'для' : 'события'} <code>${esc(b.event)}</code> ещё не зарегистрирован в GA4 (Admin → Custom definitions). Данные появятся со дня регистрации.</div>` : null;
   $('breakdowns').innerHTML = (game.breakdowns || []).map((b, i) =>
-    `<div class="panel"><h2>${esc(b.t)}</h2><div class="tbl">${unregistered(d['lv_br' + i], b) || table(known(d['lv_br' + i], CD(b.dim)), [{t: b.col, k: CD(b.dim), map: b.labels}, {t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1}],
+    `<div class="panel"><h2>${esc(b.t)}</h2><div class="tbl">${unregistered(d['lv_br' + i], b) || table(b.keepUnset ? d['lv_br' + i] : known(d['lv_br' + i], BD(b)), [{t: b.col, k: BD(b), map: b.labels}, {t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1}],
       {bar: 'eventCount', empty: 'Пока ничего за этот период'})}</div></div>`).join('');
 }
 

@@ -135,6 +135,22 @@ window.GAME_PULSE = {
       FEATURE_NOT_SUPPORTED: 'Не поддерживается',
       NETWORK_ERROR: 'Ошибка сети',
       OK: 'OK',
+      // Huawei IAP (AppGallery build of Lift 13, src/huawei/.../Store.java > codeName)
+      NOT_LOGGED_IN: 'Huawei: не вошёл в Huawei ID',
+      LOGIN_CANCELED: 'Huawei: отменил вход в Huawei ID',
+      AREA_NOT_SUPPORTED: 'Huawei: оплата недоступна в стране аккаунта',
+      COUNTRY_NOT_SUPPORTED: 'Huawei: товар не продаётся в этой стране',
+      IAP_NOT_ACTIVATED: 'Huawei: IAP не включён',
+      PRODUCT_INVALID: 'Huawei: товар не найден / выключен',
+      AGREEMENT_NOT_ACCEPTED: 'Huawei: не принял соглашение',
+      HIGH_RISK: 'Huawei: отклонено антифродом',
+      BAD_SIGNATURE: 'Huawei: подпись покупки не сошлась',
+      RESOLUTION_FAILED: 'Huawei: окно оплаты не открылось',
+      NO_RESOLUTION: 'Huawei: нет окна оплаты',
+      NO_DATA: 'Huawei: окно оплаты закрылось без ответа',
+      FAILED: 'Huawei: ошибка',
+      PARAM_ERROR: 'Huawei: ошибка параметров',
+      CALLS_FREQUENT: 'Huawei: слишком часто',
     },
     // step of the same events: where the purchase stopped
     playStep: {
@@ -142,6 +158,16 @@ window.GAME_PULSE = {
       launch: 'Окно Play не открылось',
       retry: 'Окно Play не открылось и со 2-й попытки',
       flow: 'В окне Play',
+      env: 'Huawei: проверка окружения (IAP недоступен)',
+      login: 'Huawei: вход в Huawei ID',
+      verify: 'Huawei: проверка подписи',
+    },
+    // user property store: which build the player installed
+    store: {
+      play: 'Google Play',
+      huawei: 'AppGallery (Huawei)',
+      // Play builds before the one after 0.8.0 do not set the property
+      '(not set)': 'Google Play (старые версии без метки)',
     },
   },
 
@@ -155,6 +181,7 @@ window.GAME_PULSE = {
   //   avgs     - per-level average of a custom metric on one event (fmt 'dur' = seconds, 'ms' = milliseconds)
   //   breakdowns - small tables: one event split by one param
   //   ordered  - levels are numbers played in order (enables "reached" and drop-off)
+  //   breakdown scope: 'user' - dim is a user property (customUser:), keepUnset - keep the "(not set)" row
   games: {
     '558926253': { // cat-sort
       level: 'level', start: 'level_start', win: 'level_win', lose: 'level_lose', ordered: true,
@@ -244,12 +271,17 @@ window.GAME_PULSE = {
         {event: 'level_end', dim: 'floor', t: 'На каком этаже проигрывают', col: 'Этаж'},
         {event: 'run_quit', dim: 'floor', t: 'На каком этаже бросают забег', col: 'Этаж'},
         {event: 'remove_ads_tap', dim: 'from', t: 'Откуда жмут «убрать рекламу»', col: 'Откуда'},
-        {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play', col: 'Ответ', labels: 'play'},
+        {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play / Huawei', col: 'Ответ', labels: 'play'},
         {event: 'remove_ads_result', dim: 'step', t: 'Покупка «без рекламы»: где сорвалось', col: 'Шаг', labels: 'playStep'},
-        {event: 'remove_ads_result', dim: 'msg', t: 'Покупка «без рекламы»: текст ошибки Play', col: 'Текст'},
+        {event: 'remove_ads_result', dim: 'msg', t: 'Покупка «без рекламы»: текст ошибки Play / Huawei', col: 'Текст'},
         {event: 'ad_interstitial', dim: 'from', t: 'Межуровневая реклама: где', col: 'Где'},
         {event: 'notif_perm', dim: 'result', t: 'Напоминания: ответ игрока', col: 'Ответ'},
         {event: 'share', dim: 'from', t: 'Чем делятся', col: 'Откуда'},
+        // store = user property (play / huawei), registered 2026-11-05 when the AppGallery build went to review
+        {event: 'first_open', dim: 'store', scope: 'user', keepUnset: true, t: 'Установки по магазинам', col: 'Магазин', labels: 'store'},
+        {event: 'level_start', dim: 'store', scope: 'user', keepUnset: true, t: 'Забеги по магазинам', col: 'Магазин', labels: 'store'},
+        {event: 'level_end', dim: 'store', scope: 'user', keepUnset: true, t: 'Законченные забеги по магазинам', col: 'Магазин', labels: 'store'},
+        {event: 'app_remove', dim: 'store', scope: 'user', keepUnset: true, t: 'Удаления по магазинам', col: 'Магазин', labels: 'store'},
       ],
     },
   },
