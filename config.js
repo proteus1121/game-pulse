@@ -260,7 +260,9 @@ window.GAME_PULSE = {
     '559461409': { // lift-13
       level: 'level_name', start: 'level_start', win: 'level_end', lose: 'level_end', outcome: 'success',
       cols: [{event: 'anomaly_found', t: 'Нашли аномалий'}, {event: 'anomaly_missed', t: 'Пропустили'}, {event: 'false_alarm', t: 'Ложные тревоги'},
-             {event: 'run_continue', t: 'Продолжили'}, {event: 'run_quit', t: 'Бросили'}],
+             {event: 'run_continue', t: 'Продолжили'}, {event: 'run_quit', t: 'Бросили'},
+             // together (mp.js, 2026-11-05): searches, matches started / finished
+             {event: 'mp_search', t: 'Вместе: поиск'}, {event: 'mp_start', t: 'Вместе: матчи'}, {event: 'mp_end', t: 'Вместе: доиграли'}],
       avgs: [{event: 'level_end', metric: 'time', t: 'Время забега', fmt: 'dur'},
              {event: 'anomaly_found', metric: 'ms', t: 'Реакция на аномалию', fmt: 'ms'}],
       breakdowns: [
@@ -277,6 +279,9 @@ window.GAME_PULSE = {
         {event: 'ad_interstitial', dim: 'from', t: 'Межуровневая реклама: где', col: 'Где'},
         {event: 'notif_perm', dim: 'result', t: 'Напоминания: ответ игрока', col: 'Ответ'},
         {event: 'share', dim: 'from', t: 'Чем делятся', col: 'Откуда'},
+        {event: 'mp_end', dim: 'floor', t: 'Вместе: на каком этаже кончается матч', col: 'Этаж'},
+        {event: 'mp_floor', dim: 'anomaly', t: 'Вместе: аномалии на этажах', col: 'Аномалия'},
+        {event: 'mp_mic', dim: 'result', t: 'Вместе: микрофон', col: 'Ответ'},
         // store = user property (play / huawei), registered 2026-11-05 when the AppGallery build went to review
         {event: 'first_open', dim: 'store', scope: 'user', keepUnset: true, t: 'Установки по магазинам', col: 'Магазин', labels: 'store'},
         {event: 'level_start', dim: 'store', scope: 'user', keepUnset: true, t: 'Забеги по магазинам', col: 'Магазин', labels: 'store'},
