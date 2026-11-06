@@ -69,6 +69,15 @@ window.GAME_PULSE = {
     iap_result: 'Ответ Google Play на покупку (не купил)',
     iap_bought: 'Купил (подтвердил Google Play)',
     remove_ads_tap: 'Нажал «убрать рекламу»',
+    // Lift 13 together mode
+    mp_search: 'Вместе: начал искать попутчиков',
+    mp_start: 'Вместе: матч начался',
+    mp_floor: 'Вместе: этаж пройден (голосование)',
+    mp_hunt: 'Вместе: лифт проголодался, охота',
+    mp_end: 'Вместе: матч закончился',
+    mp_mic: 'Вместе: ответ на запрос микрофона',
+    mp_limit: 'Вместе: бесплатная поездка на сегодня уже была',
+    full_show: 'Открыл экран полной версии',
     remove_ads_click: 'Нажал «убрать рекламу»',
     remove_ads_result: 'Ответ Google Play на покупку (не купил)',
     remove_ads_bought: 'Купил отключение рекламы',
@@ -262,7 +271,9 @@ window.GAME_PULSE = {
       cols: [{event: 'anomaly_found', t: 'Нашли аномалий'}, {event: 'anomaly_missed', t: 'Пропустили'}, {event: 'false_alarm', t: 'Ложные тревоги'},
              {event: 'run_continue', t: 'Продолжили'}, {event: 'run_quit', t: 'Бросили'},
              // together (mp.js, 2026-11-05): searches, matches started / finished
-             {event: 'mp_search', t: 'Вместе: поиск'}, {event: 'mp_start', t: 'Вместе: матчи'}, {event: 'mp_end', t: 'Вместе: доиграли'}],
+             {event: 'mp_search', t: 'Вместе: поиск'}, {event: 'mp_start', t: 'Вместе: матчи'}, {event: 'mp_end', t: 'Вместе: доиграли'},
+             // 0.9.1: without the full version one ride together a day; mp_limit = hit it, full_show = the full version screen
+             {event: 'mp_limit', t: 'Вместе: упёрлись в лимит'}, {event: 'full_show', t: 'Экран полной версии'}],
       avgs: [{event: 'level_end', metric: 'time', t: 'Время забега', fmt: 'dur'},
              {event: 'anomaly_found', metric: 'ms', t: 'Реакция на аномалию', fmt: 'ms'}],
       breakdowns: [
@@ -272,7 +283,7 @@ window.GAME_PULSE = {
         {event: 'gift_take', dim: 'gift', t: 'Подарки', col: 'Подарок'},
         {event: 'level_end', dim: 'floor', t: 'На каком этаже проигрывают', col: 'Этаж'},
         {event: 'run_quit', dim: 'floor', t: 'На каком этаже бросают забег', col: 'Этаж'},
-        {event: 'remove_ads_tap', dim: 'from', t: 'Откуда жмут «убрать рекламу»', col: 'Откуда'},
+        {event: 'remove_ads_tap', dim: 'from', t: 'Откуда жмут «купить полную версию»', col: 'Откуда'},
         {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play / Huawei', col: 'Ответ', labels: 'play'},
         {event: 'remove_ads_result', dim: 'step', t: 'Покупка «без рекламы»: где сорвалось', col: 'Шаг', labels: 'playStep'},
         {event: 'remove_ads_result', dim: 'msg', t: 'Покупка «без рекламы»: текст ошибки Play / Huawei', col: 'Текст'},
@@ -282,6 +293,12 @@ window.GAME_PULSE = {
         {event: 'mp_end', dim: 'floor', t: 'Вместе: на каком этаже кончается матч', col: 'Этаж'},
         {event: 'mp_floor', dim: 'anomaly', t: 'Вместе: аномалии на этажах', col: 'Аномалия'},
         {event: 'mp_mic', dim: 'result', t: 'Вместе: микрофон', col: 'Ответ'},
+        {event: 'mp_start', dim: 'humans', t: 'Вместе: сколько людей в матче', col: 'Людей'},
+        {event: 'mp_start', dim: 'role', t: 'Вместе: роли', col: 'Роль'},
+        {event: 'mp_end', dim: 'alive', t: 'Вместе: сколько доехало', col: 'Доехало'},
+        {event: 'mp_end', dim: 'success', t: 'Вместе: победы', col: 'Победа'},
+        {event: 'mp_hunt', dim: 'floor', t: 'Вместе: охота по этажам', col: 'Этаж'},
+        {event: 'full_show', dim: 'from', t: 'Экран полной версии: откуда', col: 'Откуда'},
         // store = user property (play / huawei), registered 2026-11-05 when the AppGallery build went to review
         {event: 'first_open', dim: 'store', scope: 'user', keepUnset: true, t: 'Установки по магазинам', col: 'Магазин', labels: 'store'},
         {event: 'level_start', dim: 'store', scope: 'user', keepUnset: true, t: 'Забеги по магазинам', col: 'Магазин', labels: 'store'},
