@@ -189,24 +189,69 @@
 
   const cache = new Map();
 
-  async function runGroup(prop, key, reports, method, ttlSec) {
+  // GA4 allows 10 concurrent Data API requests per property (reports and
+  // realtime together); past that it answers 429 "Exhausted concurrent
+  // requests quota". Keep well under it and queue the rest.
+  const MAX_PER_PROP = 5;
+  const lanes = new Map();
+
+  async function limited(prop, fn) {
+    let lane = lanes.get(prop);
+    if (!lane) lanes.set(prop, lane = {active: 0, queue: []});
+    if (lane.active >= MAX_PER_PROP) await new Promise(r => lane.queue.push(r));
+    lane.active++;
+    try { return await fn(); }
+    finally {
+      lane.active--;
+      const next = lane.queue.shift();
+      if (next) next();
+    }
+  }
+
+  const pause = ms => new Promise(r => setTimeout(r, ms));
+
+  // The concurrency 429 clears as soon as other requests finish, so retry it
+  // with backoff. Other 429s (hourly/daily tokens) won't, so fail them at once.
+  async function dataCall(prop, url, body) {
+    for (let attempt = 0; ; attempt++) {
+      try { return await limited(prop, () => call(url, body)); }
+      catch (e) {
+        if (attempt >= 4 || !/HTTP 429/.test(e.message) || !/concurrent/i.test(e.message)) throw e;
+        await pause(500 * 2 ** attempt + Math.random() * 300);
+      }
+    }
+  }
+
+  // A group that is already loading is shared, not sent a second time
+  // (timers and the refresh button can overlap a slow load).
+  const inflight = new Map();
+
+  function runGroup(prop, key, reports, method, ttlSec) {
     const ck = prop + '|' + key, hit = cache.get(ck);
-    if (hit && Date.now() - hit.at < ttlSec * 1000) return hit.value;
+    if (hit && Date.now() - hit.at < ttlSec * 1000) return Promise.resolve(hit.value);
+    if (inflight.has(ck)) return inflight.get(ck);
+    const p = loadGroup(prop, ck, reports, method).finally(() => inflight.delete(ck));
+    inflight.set(ck, p);
+    return p;
+  }
+
+  async function loadGroup(prop, ck, reports, method) {
     const url = DATA + prop + ':' + method;
     const entries = await Promise.all(Object.entries(reports).map(async ([name, body]) => {
       try {
-        return [name, {rows: rows(await call(url, body))}];
+        return [name, {rows: rows(await dataCall(prop, url, body))}];
       } catch (e) {
         if (e instanceof NeedLogin) throw e;
         if (FALLBACKS[name] && /is not a valid dimension/.test(e.message)) {
-          try { return [name, {rows: rows(await call(url, FALLBACKS[name](body))), reduced: true}]; }
+          try { return [name, {rows: rows(await dataCall(prop, url, FALLBACKS[name](body))), reduced: true}]; }
           catch (e2) { if (e2 instanceof NeedLogin) throw e2; return [name, {error: e2.message}]; }
         }
         return [name, {error: e.message}];
       }
     }));
     const value = Object.fromEntries(entries);
-    cache.set(ck, {at: Date.now(), value});
+    // Don't keep a group that hit quota errors, so the next load tries again.
+    if (!entries.some(([, v]) => v.error && /HTTP 429/.test(v.error))) cache.set(ck, {at: Date.now(), value});
     return value;
   }
 
