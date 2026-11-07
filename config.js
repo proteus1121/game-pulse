@@ -78,6 +78,8 @@ window.GAME_PULSE = {
     mp_mic: 'Вместе: ответ на запрос микрофона',
     mp_limit: 'Вместе: бесплатная поездка на сегодня уже была',
     full_show: 'Открыл экран полной версии',
+    ad_load_fail: 'Реклама не загрузилась (ошибка, не no fill)',
+    ad_consent_block: 'Реклама запрещена согласием (UMP)',
     remove_ads_click: 'Нажал «убрать рекламу»',
     remove_ads_result: 'Ответ Google Play на покупку (не купил)',
     remove_ads_bought: 'Купил отключение рекламы',
@@ -299,6 +301,9 @@ window.GAME_PULSE = {
         {event: 'mp_end', dim: 'success', t: 'Вместе: победы', col: 'Победа'},
         {event: 'mp_hunt', dim: 'floor', t: 'Вместе: охота по этажам', col: 'Этаж'},
         {event: 'full_show', dim: 'from', t: 'Экран полной версии: откуда', col: 'Откуда'},
+        // 0.9.5: why an ad never came (no fill is ad_nofill_pause)
+        {event: 'ad_load_fail', dim: 'code', t: 'Реклама не загрузилась: код ошибки', col: 'Код'},
+        {event: 'ad_consent_block', dim: 'result', t: 'Реклама запрещена согласием: статус', col: 'Статус'},
         // store = user property (play / huawei), registered 2026-11-05 when the AppGallery build went to review
         {event: 'first_open', dim: 'store', scope: 'user', keepUnset: true, t: 'Установки по магазинам', col: 'Магазин', labels: 'store'},
         {event: 'level_start', dim: 'store', scope: 'user', keepUnset: true, t: 'Забеги по магазинам', col: 'Магазин', labels: 'store'},
