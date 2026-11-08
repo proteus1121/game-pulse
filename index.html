@@ -135,6 +135,20 @@ td.lvl { font-family: var(--mono); }
 tr.click { cursor: pointer; }
 tr.click:hover td { background: var(--accent-soft); }
 td.game { display: flex; align-items: center; font-weight: 500; }
+/* breakdowns grouped by topic: one collapsible panel per group, small tables inside */
+details.group > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+details.group > summary::-webkit-details-marker { display: none; }
+details.group > summary h2 { margin: 0; }
+details.group > summary h2::before { content: '▸ '; display: inline-block; width: 1.2em; }
+details.group[open] > summary h2::before { content: '▾ '; }
+details.group > summary .note { flex: 1 1 260px; }
+details.group[open] > summary { margin-bottom: 14px; }
+.subgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px 28px; }
+.sub h3 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+.sub .hint { margin: 0 0 6px; }
+.sub table td, .sub table th { padding: 4px 6px; }
+td.v { white-space: normal; }
+.group .note.more { margin-top: 12px; }
 .empty, .err { color: var(--muted); font-size: 13px; padding: 8px 0; }
 .err { color: var(--bad); font-family: var(--mono); font-size: 12px; word-break: break-word; }
 .note { color: var(--muted); font-size: 12px; }
@@ -237,8 +251,8 @@ td.game { display: flex; align-items: center; font-weight: 500; }
     <div class="panel"><h2>События, 30 мин</h2><div class="tbl" id="rtEvents"></div></div>
     <div class="panel"><h2>Страны, 30 мин</h2><div class="tbl" id="rtCountries"></div></div>
     <div class="panel"><h2>События игры</h2><div class="tbl" id="events"></div></div>
-    <div class="panel"><h2 id="reasonsTitle">Ошибки покупок</h2><div class="tbl" id="reasons"></div></div>
-    <div class="panel"><h2 id="lossesTitle">Причины проигрышей</h2><div class="tbl" id="losses"></div></div>
+    <div class="panel" id="reasonsPanel"><h2 id="reasonsTitle">Ошибки покупок</h2><div class="tbl" id="reasons"></div></div>
+    <div class="panel" id="lossesPanel"><h2 id="lossesTitle">Причины проигрышей</h2><div class="tbl" id="losses"></div></div>
     <div class="panel"><h2 id="versionsTitle">Версии</h2><div class="tbl" id="versions"></div></div>
     <div class="panel"><h2 id="countriesTitle">Страны</h2><div class="tbl" id="countries"></div></div>
   </section>
@@ -518,7 +532,8 @@ function renderReports(d) {
     ['Ошибки покупок', evc('purchase_failed', 't'), evc('purchase_failed', 'y'), fmt, true],
     ['Выручка', num(T.totalRevenue), num(Y.totalRevenue), fmt],
   ];
-  $('tiles').innerHTML = d.totals.error ? `<div class="err">${esc(d.totals.error)}</div>` : tiles.map(([label, t, y, f, bad]) =>
+  // the first four always; money and removals only when there was something in either period
+  $('tiles').innerHTML = d.totals.error ? `<div class="err">${esc(d.totals.error)}</div>` : tiles.filter((t, i) => i < 4 || t[1] || t[2]).map(([label, t, y, f, bad]) =>
     `<div class="tile"><span class="label">${label}</span><span class="val">${f(t)}</span>` +
     `<span class="sub">${delta(t, y, bad)}${P.prev} ${f(y)}</span></div>`).join('');
 
@@ -551,9 +566,14 @@ function renderReports(d) {
   const byEvent = name => d.fail_reasons.rows
     ? Object.assign({}, d.fail_reasons, {rows: d.fail_reasons.rows.filter(r => r.eventName === name)})
     : d.fail_reasons;
-  $('reasons').innerHTML = table(byEvent('purchase_failed'), reasonCols, {empty: 'Ошибок нет'});
   const game = (window.GAME_PULSE.games || {})[current];
-  $('losses').innerHTML = table(byEvent(game && game.lose === 'level_fail' ? 'level_fail' : 'level_failed'), reasonCols, {empty: 'Проигрышей нет'});
+  // These two only make sense for games that send purchase_failed / level_failed with a reason.
+  const panel = (el, rep, empty) => {
+    $(el + 'Panel').hidden = !rep.error && !(rep.rows || []).length;
+    $(el).innerHTML = table(rep, reasonCols, {empty});
+  };
+  panel('reasons', byEvent('purchase_failed'), 'Ошибок нет');
+  panel('losses', byEvent(game && game.lose === 'level_fail' ? 'level_fail' : 'level_failed'), 'Проигрышей нет');
   renderLevels(d, game);
   $('versions').innerHTML = table(d.versions, [{t: 'Версия', k: 'appVersion'}, {t: 'Активные', k: 'activeUsers', n: 1}, {t: 'Новые', k: 'newUsers', n: 1}], {bar: 'activeUsers'});
   $('countries').innerHTML = table(d.countries, [{t: 'Страна', k: 'country'}, {t: 'Активные', k: 'activeUsers', n: 1}, {t: 'Новые', k: 'newUsers', n: 1}], {bar: 'activeUsers'});
@@ -687,8 +707,11 @@ function renderLevels(d, game) {
     const cols = ['<th>Уровень</th>', '<th class="n">Начали</th>', '<th class="n" title="запусков уровня">Попыток</th>'];
     if (game.win) cols.push(`<th class="n">${winLabel}</th>`, `<th class="n" title="${winLabel.toLowerCase()} / начали, игроков">%</th>`);
     if (game.lose) cols.push('<th class="n">Проигрыши</th>');
-    (game.cols || []).forEach(c => cols.push(`<th class="n">${esc(c.t)}</th>`));
-    (game.avgs || []).forEach(a => cols.push(`<th class="n">${esc(a.t)}</th>`));
+    // columns with nothing in them for this period are left out
+    const xcols = (game.cols || []).filter(c => list.some(st => st.cols[c.event]));
+    const xavgs = (game.avgs || []).map((a, i) => Object.assign({i}, a)).filter(a => list.some(st => st.avgs[a.i] != null));
+    xcols.forEach(c => cols.push(`<th class="n">${esc(c.t)}</th>`));
+    xavgs.forEach(a => cols.push(`<th class="n">${esc(a.t)}</th>`));
     cols.push(`<th>${game.ordered ? 'Дошли' : 'Игроков'}</th>`);
     let s = '<table><thead><tr>' + cols.join('') + '</tr></thead><tbody>';
     list.forEach(st => {
@@ -696,8 +719,8 @@ function renderLevels(d, game) {
       s += `<tr class="${drop && st.L === drop.L ? 'hot' : ''}"><td class="lvl">${esc(st.L)}</td><td class="n">${fmt(st.startU)}</td><td class="n">${fmt(st.starts)}</td>`;
       if (game.win) s += `<td class="n">${fmt(won)}</td><td class="n">${st.startU ? pct(won, st.startU) + '%' : '–'}</td>`;
       if (game.lose) s += `<td class="n">${fmt(st.loses)}</td>`;
-      (game.cols || []).forEach(c => s += `<td class="n">${fmt(st.cols[c.event] || 0)}</td>`);
-      (game.avgs || []).forEach((a, i) => { const v = st.avgs[i]; s += `<td class="n">${v == null ? '–' : a.fmt === 'dur' ? dur(v) : a.fmt === 'ms' ? ms(v) : fmt(v)}</td>`; });
+      xcols.forEach(c => s += `<td class="n">${fmt(st.cols[c.event] || 0)}</td>`);
+      xavgs.forEach(a => { const v = st.avgs[a.i]; s += `<td class="n">${v == null ? '–' : a.fmt === 'dur' ? dur(v) : a.fmt === 'ms' ? ms(v) : fmt(v)}</td>`; });
       s += `<td style="width:18%"><div class="bar" title="${Math.round(reach * 100)}%"><span style="width:${reach * 100}%"></span></div></td></tr>`;
     });
     $('levelsTable').innerHTML = s + '</tbody></table>';
@@ -713,9 +736,62 @@ function renderLevels(d, game) {
   // A param not yet registered in GA4 > Custom definitions: say so instead of a raw API error.
   const unregistered = (rep, b) => rep && rep.error && /is not a valid (dimension|metric)/.test(rep.error)
     ? `<div class="empty">${b.scope === 'user' ? 'Свойство пользователя' : 'Параметр'} <code>${esc(b.dim)}</code> ${b.scope === 'user' ? 'для' : 'события'} <code>${esc(b.event)}</code> ещё не зарегистрирован в GA4 (Admin → Custom definitions). Данные появятся со дня регистрации.</div>` : null;
-  $('breakdowns').innerHTML = (game.breakdowns || []).map((b, i) =>
-    `<div class="panel"><h2>${esc(b.t)}</h2><div class="tbl">${unregistered(d['lv_br' + i], b) || table(b.keepUnset ? d['lv_br' + i] : known(d['lv_br' + i], BD(b)), [{t: b.col, k: BD(b), map: b.labels}, {t: 'Раз', k: 'eventCount', n: 1}, {t: 'Игроков', k: 'totalUsers', n: 1}],
-      {bar: 'eventCount', empty: 'Пока ничего за этот период'})}</div></div>`).join('');
+  // Breakdowns, sorted into topics. Empty and not-yet-registered ones don't get
+  // a table each - they are listed in one line at the bottom of their topic.
+  const groups = BR_GROUPS.map(g => ({g, full: [], empty: [], unreg: []}));
+  (game.breakdowns || []).forEach((b, i) => {
+    const rep = d['lv_br' + i], slot = groups[groupOf(b)];
+    if (unregistered(rep, b)) return slot.unreg.push(b);
+    const shown = b.keepUnset ? rep : known(rep, BD(b));
+    if (shown && !shown.error && !(shown.rows || []).length) return slot.empty.push(b);
+    slot.full.push(breakdownTable(b, shown));
+  });
+  const open = k => store('gp.grp.' + k) !== '0';
+  $('breakdowns').innerHTML = groups.filter(x => x.full.length + x.empty.length + x.unreg.length).map(({g, full, empty, unreg}) => {
+    const more = [];
+    if (empty.length) more.push('Пусто за период: ' + empty.map(b => esc(b.t)).join(', ') + '.');
+    if (unreg.length) more.push('Параметр ещё не зарегистрирован в GA4 (Admin → Custom definitions): ' + unreg.map(b => `${esc(b.t)} (<code>${esc(b.dim)}</code>)`).join(', ') + '.');
+    const count = full.length ? `${full.length} из ${full.length + empty.length + unreg.length} с данными` : 'нет данных за период';
+    return `<div class="panel wide"><details class="group" data-k="${g.k}"${full.length && open(g.k) ? ' open' : ''}>` +
+      `<summary><h2>${esc(g.t)}</h2><span class="note">${esc(g.hint)} · ${count}</span></summary>` +
+      (full.length ? `<div class="subgrid">${full.join('')}</div>` : '') +
+      (more.length ? `<p class="note more">${more.join(' ')}</p>` : '') + '</details></div>';
+  }).join('');
+  $('breakdowns').querySelectorAll('details.group').forEach(el => el.ontoggle = () => store('gp.grp.' + el.dataset.k, el.open ? '1' : '0'));
+}
+
+// Topics for breakdowns: picked by event name, or by `group: '<k>'` in config.js.
+const BR_GROUPS = [
+  {k: 'run', t: 'Забеги и уровни', hint: 'где проигрывают, бросают, чем кончается игра', re: /^(level_|run_|night_|game_over|post_score|perk_|chest_|mission_|daily_)/},
+  {k: 'anomaly', t: 'Аномалии', hint: 'что находят, что пропускают, ложные тревоги', re: /^(anomaly_|false_alarm|kid_|camera_|chat_)/},
+  {k: 'mp', t: 'Игра вместе', hint: 'мультиплеер: состав матчей, итоги, микрофон', re: /^mp_/},
+  {k: 'money', t: 'Покупки', hint: 'нажатия, ответы Google Play / Huawei, что купили', re: /^(remove_ads|iap_|purchase|begin_checkout|full_show|item_bought|upgrade_bought)/},
+  {k: 'ads', t: 'Реклама', hint: 'где показывается и почему не показалась', re: /^(ad_|gift_ad)/},
+  {k: 'store', t: 'По магазинам', hint: 'Google Play против AppGallery', re: null},
+  {k: 'other', t: 'Остальное', hint: 'бустеры, подарки, напоминания, шеринг', re: /./},
+];
+function groupOf(b) {
+  const byKey = BR_GROUPS.findIndex(g => g.k === b.group);
+  if (byKey >= 0) return byKey;
+  if (b.scope === 'user' && b.dim === 'store') return BR_GROUPS.findIndex(g => g.k === 'store');
+  return BR_GROUPS.findIndex(g => g.re && g.re.test(b.event));
+}
+
+// One small table: value, how many players, share of the events.
+function breakdownTable(b, rep) {
+  const about = (window.GAME_PULSE.events || {})[b.event];
+  // "Вместе: роли" -> "Роли": the group heading already says it
+  const t = b.t.replace(/^Вместе:\s*(.)/, (m, c) => c.toUpperCase());
+  const head = `<div class="sub"><h3>${esc(t)}</h3><p class="hint">${about ? esc(about) + ' · ' : ''}<code>${esc(b.event)}</code></p>`;
+  if (rep.error) return head + `<div class="err">${esc(rep.error)}</div></div>`;
+  const rows = rep.rows, k = BD(b), total = rows.reduce((s, r) => s + num(r.eventCount), 0) || 1;
+  let s = `<table><thead><tr><th>${esc(b.col)}</th><th class="n" title="уникальных игроков">Игроков</th><th class="n" title="сколько раз событие отправлено">Раз</th><th class="n" title="доля от всех раз в этой таблице">Доля</th><th></th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    const share = num(r.eventCount) / total;
+    s += `<tr><td class="v">${esc(label(r[k] || '(not set)', b.labels))}</td><td class="n">${fmt(r.totalUsers)}</td><td class="n">${fmt(r.eventCount)}</td>` +
+      `<td class="n">${Math.round(share * 100)}%</td><td style="width:22%"><div class="bar"><span style="width:${share * 100}%"></span></div></td></tr>`;
+  });
+  return head + '<div class="tbl">' + s + '</tbody></table></div></div>';
 }
 
 // ---------------------------------------------------------------- all games
