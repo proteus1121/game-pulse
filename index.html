@@ -149,6 +149,29 @@ details.group[open] > summary { margin-bottom: 14px; }
 .sub table td, .sub table th { padding: 4px 6px; }
 td.v { white-space: normal; }
 .group .note.more { margin-top: 12px; }
+.foot { color: var(--muted); font-size: 11px; margin: 6px 0 0; }
+.hbars { display: flex; flex-direction: column; gap: 2px; }
+.hrow, .vrow { display: grid; grid-template-columns: minmax(70px, 38%) 1fr 36px auto; gap: 8px; align-items: center; padding: 3px 0; font-size: 13px; }
+.hrow .lab, .vrow .lab, .splitleg .lab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hrow .track { height: 10px; background: var(--accent-soft); border-radius: 3px; position: relative; }
+.hrow .fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; min-width: 2px; }
+.pct { font: 600 12px var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+.cnt { font: 11px var(--mono); color: var(--muted); text-align: right; white-space: nowrap; min-width: 56px; }
+.vbar { display: flex; height: 10px; border-radius: 3px; overflow: hidden; background: var(--line); }
+.vbar .good { background: var(--good); } .vbar .bad { background: var(--bad); opacity: .8; }
+.vsum { margin: 0 0 8px; font-size: 12px; color: var(--muted); display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.vsum b { font: 600 20px var(--mono); color: var(--fg); margin-right: -6px; }
+.vsum .sw { margin-right: 4px; }
+.split { display: flex; height: 18px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 4px 0 10px; }
+.split span { min-width: 3px; }
+.splitleg { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.splitleg div { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+.splitleg .sw { margin: 0; }
+.splitleg b { font: 600 13px var(--mono); }
+details.more > summary { cursor: pointer; color: var(--accent); font-size: 12px; padding: 4px 0; list-style: none; }
+svg.hist text { font-size: 9px; }
+.wide2 { grid-column: 1 / -1; }
+table.matrix small { color: var(--muted); font-size: 11px; margin-left: 4px; }
 .empty, .err { color: var(--muted); font-size: 13px; padding: 8px 0; }
 .err { color: var(--bad); font-family: var(--mono); font-size: 12px; word-break: break-word; }
 .note { color: var(--muted); font-size: 12px; }
@@ -643,7 +666,7 @@ function hardestLevel(list) {
   return best;
 }
 
-function levelsChart(list, drop) {
+function levelsChart(list, drop, names) {
   const W = 900, H = 150, L = 34, B = 20, n = list.length;
   const top = niceMax(Math.max(1, ...list.map(s => s.startU)) * 1.15);
   const bw = (W - L) / n, yy = v => 14 + (H - 14) * (1 - v / top);
@@ -655,7 +678,7 @@ function levelsChart(list, drop) {
   });
   list.forEach((st, i) => {
     const x0 = L + i * bw + gap, w = Math.max(1, bw - gap * 2), won = Math.min(st.startU, st.winU);
-    s += `<g><title>Уровень ${esc(st.L)}: начали ${st.startU}, прошли ${won} (${pct(won, st.startU)}%), попыток ${st.starts}</title>`;
+    s += `<g><title>${esc(names(st.L))}: начали ${st.startU}, прошли ${won} (${pct(won, st.startU)}%), попыток ${st.starts}</title>`;
     s += `<rect x="${x0}" y="${yy(st.startU)}" width="${w}" height="${yy(0) - yy(st.startU)}" rx="2" fill="var(--accent)" opacity=".85"/>`;
     s += `<rect x="${x0}" y="${yy(won)}" width="${w}" height="${yy(0) - yy(won)}" rx="2" fill="var(--good)"/>`;
     s += `<rect x="${x0 - gap}" y="0" width="${bw}" height="${H}" fill="transparent"/></g>`;
@@ -664,7 +687,7 @@ function levelsChart(list, drop) {
       s += `<path d="M${cx - 5} ${ty - 8} L${cx + 5} ${ty - 8} L${cx} ${ty} Z" fill="var(--bad)"/>`;
       s += `<text x="${cx}" y="${ty - 12}" text-anchor="middle" style="fill:var(--fg)">−${Math.round(drop.drop * 100)}%</text>`;
     }
-    if (i % labelEvery === 0 || i === n - 1) s += `<text x="${x0 + w / 2}" y="${H + 15}" text-anchor="middle">${esc(String(st.L).slice(0, 8))}</text>`;
+    if (i % labelEvery === 0 || i === n - 1) s += `<text x="${x0 + w / 2}" y="${H + 15}" text-anchor="middle">${esc(String(names(st.L)).slice(0, 14))}</text>`;
   });
   return s + '</svg>';
 }
@@ -694,12 +717,12 @@ function renderLevels(d, game) {
     if (far) cards.push(['', 'ур. ' + esc(far), 'самый дальний уровень за период']);
   }
   const hard = hardestLevel(list);
-  if (hard && game.win) cards.push(['warn', `ур. ${esc(hard.L)}: ${Math.round(hard.rate * 100)}%`, `самый трудный: столько игроков его прошли, ${fmt(hard.starts / hard.startU)} попыток на игрока`]);
+  if (hard && game.win) cards.push(['warn', `${game.levelLabels ? esc(nameOf(hard.L, game.levelLabels)) : 'ур. ' + esc(hard.L)}: ${Math.round(hard.rate * 100)}%`, `самый трудный: столько игроков его прошли, ${fmt(hard.starts / hard.startU)} попыток на игрока`]);
   $('levelsInsights').innerHTML = list.length ? cards.map(([cls, b, t]) => `<div class="insight ${cls}"><b>${b}</b><span>${t}</span></div>`).join('') : '';
 
   const drop = game.ordered ? biggestDrop(list) : null;
   $('levelsLegend').hidden = !list.length;
-  $('levelsChart').innerHTML = list.length > 1 ? levelsChart(list, drop) : '';
+  $('levelsChart').innerHTML = list.length > 1 ? levelsChart(list, drop, L => nameOf(L, game.levelLabels)) : '';
 
   if (!list.length) {
     $('levelsTable').innerHTML = `<div class="empty">Данных по уровням ещё нет. Параметры зарегистрированы ${esc(C.levelsSince)} — GA4 показывает их только для событий после этой даты, первые цифры появятся через сутки-двое.</div>`;
@@ -716,7 +739,7 @@ function renderLevels(d, game) {
     let s = '<table><thead><tr>' + cols.join('') + '</tr></thead><tbody>';
     list.forEach(st => {
       const won = Math.min(st.startU, st.winU), reach = base ? st.startU / base : 0;
-      s += `<tr class="${drop && st.L === drop.L ? 'hot' : ''}"><td class="lvl">${esc(st.L)}</td><td class="n">${fmt(st.startU)}</td><td class="n">${fmt(st.starts)}</td>`;
+      s += `<tr class="${drop && st.L === drop.L ? 'hot' : ''}"><td class="lvl" title="${esc(st.L)}">${esc(nameOf(st.L, game.levelLabels))}</td><td class="n">${fmt(st.startU)}</td><td class="n">${fmt(st.starts)}</td>`;
       if (game.win) s += `<td class="n">${fmt(won)}</td><td class="n">${st.startU ? pct(won, st.startU) + '%' : '–'}</td>`;
       if (game.lose) s += `<td class="n">${fmt(st.loses)}</td>`;
       xcols.forEach(c => s += `<td class="n">${fmt(st.cols[c.event] || 0)}</td>`);
@@ -731,29 +754,30 @@ function renderLevels(d, game) {
   if (unset) notes.push(`${fmt(unset)} событий без номера уровня — отправлены до регистрации параметров (${C.levelsSince}).`);
   $('levelsNote').textContent = notes.join(' ');
 
-  // rows without the param are old events from before it was registered
-  const known = (rep, k) => rep && rep.rows ? Object.assign({}, rep, {rows: rep.rows.filter(r => r[k] && r[k] !== '(not set)')}) : rep;
-  // A param not yet registered in GA4 > Custom definitions: say so instead of a raw API error.
-  const unregistered = (rep, b) => rep && rep.error && /is not a valid (dimension|metric)/.test(rep.error)
-    ? `<div class="empty">${b.scope === 'user' ? 'Свойство пользователя' : 'Параметр'} <code>${esc(b.dim)}</code> ${b.scope === 'user' ? 'для' : 'события'} <code>${esc(b.event)}</code> ещё не зарегистрирован в GA4 (Admin → Custom definitions). Данные появятся со дня регистрации.</div>` : null;
+  // A param not yet registered in GA4 > Custom definitions: listed in one line, not a raw API error.
+  const unregistered = rep => rep && rep.error && /is not a valid (dimension|metric)/.test(rep.error);
   // Breakdowns, sorted into topics. Empty and not-yet-registered ones don't get
-  // a table each - they are listed in one line at the bottom of their topic.
-  const groups = BR_GROUPS.map(g => ({g, full: [], empty: [], unreg: []}));
+  // a block each - they are listed in one line at the bottom of their topic.
+  const groups = BR_GROUPS.map(g => ({g, full: [], empty: [], unreg: [], items: []}));
   (game.breakdowns || []).forEach((b, i) => {
-    const rep = d['lv_br' + i], slot = groups[groupOf(b)];
-    if (unregistered(rep, b)) return slot.unreg.push(b);
-    const shown = b.keepUnset ? rep : known(rep, BD(b));
-    if (shown && !shown.error && !(shown.rows || []).length) return slot.empty.push(b);
-    slot.full.push(breakdownTable(b, shown));
+    const rep = d['lv_br' + i], vs = b.vs ? d['lv_br' + i + 'v'] : null, slot = groups[groupOf(b)];
+    if (unregistered(rep) || unregistered(vs)) return slot.unreg.push(b);
+    if (rep && rep.error) return slot.full.push(subHead(b) + `<div class="err">${esc(rep.error)}</div></div>`);
+    const data = fold(rep, b), other = vs ? fold(vs, b) : null;
+    if (!data.rows.length && !(other && other.rows.length)) return slot.empty.push(b);
+    slot.items.push({b, data});
+    slot.full.push(breakdownView(b, data, other));
   });
+  // the store topic is one table: rows = store, columns = events
+  const st = groups.find(x => x.g.k === 'store');
+  if (st && st.items.length > 1) st.full = [storeMatrix(st.items)];
   const open = k => store('gp.grp.' + k) !== '0';
   $('breakdowns').innerHTML = groups.filter(x => x.full.length + x.empty.length + x.unreg.length).map(({g, full, empty, unreg}) => {
     const more = [];
-    if (empty.length) more.push('Пусто за период: ' + empty.map(b => esc(b.t)).join(', ') + '.');
-    if (unreg.length) more.push('Параметр ещё не зарегистрирован в GA4 (Admin → Custom definitions): ' + unreg.map(b => `${esc(b.t)} (<code>${esc(b.dim)}</code>)`).join(', ') + '.');
-    const count = full.length ? `${full.length} из ${full.length + empty.length + unreg.length} с данными` : 'нет данных за период';
+    if (empty.length) more.push('Пусто за период: ' + empty.map(b => esc(shortT(b))).join(', ') + '.');
+    if (unreg.length) more.push('Параметр ещё не зарегистрирован в GA4 (Admin → Custom definitions): ' + unreg.map(b => `${esc(shortT(b))} (<code>${esc(b.dim)}</code>)`).join(', ') + '.');
     return `<div class="panel wide"><details class="group" data-k="${g.k}"${full.length && open(g.k) ? ' open' : ''}>` +
-      `<summary><h2>${esc(g.t)}</h2><span class="note">${esc(g.hint)} · ${count}</span></summary>` +
+      `<summary><h2>${esc(g.t)}</h2><span class="note">${esc(g.hint)}${full.length ? '' : ' · нет данных за период'}</span></summary>` +
       (full.length ? `<div class="subgrid">${full.join('')}</div>` : '') +
       (more.length ? `<p class="note more">${more.join(' ')}</p>` : '') + '</details></div>';
   }).join('');
@@ -762,11 +786,11 @@ function renderLevels(d, game) {
 
 // Topics for breakdowns: picked by event name, or by `group: '<k>'` in config.js.
 const BR_GROUPS = [
-  {k: 'run', t: 'Забеги и уровни', hint: 'где проигрывают, бросают, чем кончается игра', re: /^(level_|run_|night_|game_over|post_score|perk_|chest_|mission_|daily_)/},
-  {k: 'anomaly', t: 'Аномалии', hint: 'что находят, что пропускают, ложные тревоги', re: /^(anomaly_|false_alarm|kid_|camera_|chat_)/},
-  {k: 'mp', t: 'Игра вместе', hint: 'мультиплеер: состав матчей, итоги, микрофон', re: /^mp_/},
-  {k: 'money', t: 'Покупки', hint: 'нажатия, ответы Google Play / Huawei, что купили', re: /^(remove_ads|iap_|purchase|begin_checkout|full_show|item_bought|upgrade_bought)/},
+  {k: 'anomaly', t: 'Аномалии', hint: 'какие замечают, какие пропускают, где ложные тревоги', re: /^(anomaly_|false_alarm|kid_|camera_|chat_)/},
+  {k: 'run', t: 'Забеги и уровни', hint: 'где проигрывают, где бросают, чем кончается игра', re: /^(level_|run_|night_|game_over|post_score|perk_|chest_|mission_|daily_)/},
+  {k: 'money', t: 'Покупки', hint: 'откуда жмут «купить», чем кончается окно оплаты, что купили', re: /^(remove_ads|iap_|purchase|begin_checkout|full_show|item_bought|upgrade_bought)/},
   {k: 'ads', t: 'Реклама', hint: 'где показывается и почему не показалась', re: /^(ad_|gift_ad)/},
+  {k: 'mp', t: 'Игра вместе', hint: 'мультиплеер: состав матчей, роли, итоги', re: /^mp_/},
   {k: 'store', t: 'По магазинам', hint: 'Google Play против AppGallery', re: null},
   {k: 'other', t: 'Остальное', hint: 'бустеры, подарки, напоминания, шеринг', re: /./},
 ];
@@ -777,21 +801,113 @@ function groupOf(b) {
   return BR_GROUPS.findIndex(g => g.re && g.re.test(b.event));
 }
 
-// One small table: value, how many players, share of the events.
-function breakdownTable(b, rep) {
-  const about = (window.GAME_PULSE.events || {})[b.event];
-  // "Вместе: роли" -> "Роли": the group heading already says it
-  const t = b.t.replace(/^Вместе:\s*(.)/, (m, c) => c.toUpperCase());
-  const head = `<div class="sub"><h3>${esc(t)}</h3><p class="hint">${about ? esc(about) + ' · ' : ''}<code>${esc(b.event)}</code></p>`;
-  if (rep.error) return head + `<div class="err">${esc(rep.error)}</div></div>`;
-  const rows = rep.rows, k = BD(b), total = rows.reduce((s, r) => s + num(r.eventCount), 0) || 1;
-  let s = `<table><thead><tr><th>${esc(b.col)}</th><th class="n" title="уникальных игроков">Игроков</th><th class="n" title="сколько раз событие отправлено">Раз</th><th class="n" title="доля от всех раз в этой таблице">Доля</th><th></th></tr></thead><tbody>`;
-  rows.forEach(r => {
-    const share = num(r.eventCount) / total;
-    s += `<tr><td class="v">${esc(label(r[k] || '(not set)', b.labels))}</td><td class="n">${fmt(r.totalUsers)}</td><td class="n">${fmt(r.eventCount)}</td>` +
-      `<td class="n">${Math.round(share * 100)}%</td><td style="width:22%"><div class="bar"><span style="width:${share * 100}%"></span></div></td></tr>`;
+// "Вместе: роли" -> "Роли": the topic heading already says it
+const shortT = b => b.t.replace(/^Вместе:\s*(.)/, (m, c) => c.toUpperCase());
+const isUnset = v => v == null || v === '' || v === '(not set)';
+// Plain-words name of a value (config.js > valueLabels), the raw code otherwise.
+function nameOf(v, map) {
+  const m = map && (window.GAME_PULSE.valueLabels || {})[map];
+  return m && m[v] != null ? m[v] : v;
+}
+
+// Report rows -> [{v, n (events), u (players)}], biggest first. An event
+// without the param (sent by a version that didn't have it yet) is ignored.
+function fold(rep, b) {
+  const k = BD(b), by = new Map();
+  ((rep && rep.rows) || []).forEach(r => {
+    if (isUnset(r[k])) return;
+    const x = by.get(r[k]) || by.set(r[k], {v: r[k], n: 0, u: 0}).get(r[k]);
+    x.n += num(r.eventCount); x.u += num(r.totalUsers);
   });
-  return head + '<div class="tbl">' + s + '</tbody></table></div></div>';
+  return {rows: [...by.values()].sort((a, b) => b.n - a.n)};
+}
+
+function subHead(b) {
+  const about = (window.GAME_PULSE.events || {})[b.event];
+  return `<div class="sub"><h3>${esc(shortT(b))}</h3><p class="hint" title="${esc(b.event)}${b.vs ? ' / ' + esc(b.vs) : ''} · ${esc(b.dim)}">${esc(b.hint || about || b.event)}</p>`;
+}
+function plural(n, one, few, many) { n = Math.abs(Math.round(n)) % 100; const d = n % 10; return n > 10 && n < 20 ? many : d === 1 ? one : d > 1 && d < 5 ? few : many; }
+const players = u => `${fmt(u)} ${plural(u, 'игрок', 'игрока', 'игроков')}`;
+const pc = (a, b) => b ? Math.round(a / b * 100) + '%' : '–';
+
+// Picks how to draw a breakdown: numbers in order -> histogram; 2-3 answers ->
+// one split bar; otherwise a ranked list of bars. `view` in config.js overrides.
+function breakdownView(b, data, other) {
+  if (other) return subHead(b) + vsView(b, data, other) + '</div>';
+  const rows = data.rows, numeric = rows.length >= 3 && rows.every(r => /^-?\d+$/.test(r.v));
+  const view = b.view || (numeric ? 'hist' : rows.length <= 3 ? 'split' : 'bars');
+  return subHead(b) + (view === 'hist' ? histView(b, rows) : view === 'split' ? splitView(b, rows) : barsView(b, rows)) + '</div>';
+}
+
+// Ranked bars: name, bar, share of all times; times · players on the right.
+function barsView(b, rows, cap = 8) {
+  const total = rows.reduce((s, r) => s + r.n, 0) || 1, max = rows[0] ? rows[0].n : 1;
+  const row = r => `<div class="hrow" title="${esc(r.v)}: ${fmt(r.n)} раз, ${players(r.u)}"><span class="lab">${esc(nameOf(r.v, b.labels))}</span>` +
+    `<span class="track"><span class="fill" style="width:${r.n / max * 100}%"></span></span>` +
+    `<span class="pct">${pc(r.n, total)}</span><span class="cnt">${fmt(r.n)} · ${fmt(r.u)} игр.</span></div>`;
+  let s = '<div class="hbars">' + rows.slice(0, cap).map(row).join('');
+  if (rows.length > cap) s += `<details class="more"><summary>ещё ${rows.length - cap}</summary>${rows.slice(cap).map(row).join('')}</details>`;
+  return s + '</div><p class="foot">процент — доля от всех раз; справа: раз · игроков</p>';
+}
+
+// One bar split into answers: for yes/no-like params.
+function splitView(b, rows) {
+  const total = rows.reduce((s, r) => s + r.n, 0) || 1, col = i => `var(--c${i % 8 + 1})`;
+  return `<div class="split">${rows.map((r, i) => `<span style="flex:${r.n};background:${col(i)}" title="${esc(nameOf(r.v, b.labels))}: ${pc(r.n, total)}"></span>`).join('')}</div>` +
+    '<div class="splitleg">' + rows.map((r, i) => `<div title="${esc(r.v)}"><i class="sw" style="background:${col(i)}"></i><span class="lab">${esc(nameOf(r.v, b.labels))}</span>` +
+      `<b>${pc(r.n, total)}</b><span class="cnt">${fmt(r.n)} раз · ${players(r.u)}</span></div>`).join('') + '</div>';
+}
+
+// Numeric values (floor, hour, people) in their own order, gaps kept as zero.
+function histView(b, rows) {
+  const by = new Map(rows.map(r => [+r.v, r])), keys = rows.map(r => +r.v).sort((a, b) => a - b);
+  const lo = keys[0], hi = keys[keys.length - 1];
+  const xs = hi - lo <= 40 ? Array.from({length: hi - lo + 1}, (_, i) => lo + i) : keys;
+  const W = 320, H = 96, B = 16, n = xs.length, bw = W / n, max = Math.max(1, ...rows.map(r => r.n));
+  const every = Math.ceil(n / 14);
+  let s = `<svg class="hist" viewBox="0 0 ${W} ${H + B}" role="img" aria-label="${esc(b.t)}">`;
+  xs.forEach((x, i) => {
+    const r = by.get(x), v = r ? r.n : 0, h = v ? Math.max(2, v / max * (H - 14)) : 0, x0 = i * bw + 1.5, w = Math.max(1, bw - 3);
+    s += `<g><title>${esc(b.col)} ${x}: ${fmt(v)} раз${r ? ', ' + players(r.u) : ''}</title><rect x="${i * bw}" y="0" width="${bw}" height="${H}" fill="transparent"/>`;
+    s += v ? `<rect x="${x0}" y="${H - h}" width="${w}" height="${h}" rx="2" fill="var(--accent)"/>` : `<rect x="${x0}" y="${H - 1}" width="${w}" height="1" fill="var(--line)"/>`;
+    if (v && n <= 16) s += `<text x="${x0 + w / 2}" y="${H - h - 3}" text-anchor="middle">${fmt(v)}</text>`;
+    s += '</g>';
+    if (i % every === 0 || i === n - 1) s += `<text x="${x0 + w / 2}" y="${H + 12}" text-anchor="middle">${esc(nameOf(String(x), b.labels))}</text>`;
+  });
+  return s + `</svg><p class="foot">по горизонтали — ${esc(b.col.toLowerCase())}, высота — сколько раз</p>`;
+}
+
+// Two events over one param (found vs missed): what share of each value goes the good way.
+function vsView(b, good, bad) {
+  const by = new Map(), get = v => by.get(v) || by.set(v, {v, a: 0, m: 0}).get(v);
+  good.rows.forEach(r => get(r.v).a = r.n);
+  bad.rows.forEach(r => get(r.v).m = r.n);
+  const rate = r => r.a / (r.a + r.m);
+  const rows = [...by.values()].filter(r => r.a + r.m >= 3).sort((x, y) => rate(x) - rate(y));
+  const sa = rows.reduce((s, r) => s + r.a, 0), sm = rows.reduce((s, r) => s + r.m, 0), A = b.a || 'да', M = b.m || 'нет';
+  const row = r => { const t = r.a + r.m; return `<div class="vrow" title="${esc(r.v)}: ${A} ${fmt(r.a)}, ${M} ${fmt(r.m)}"><span class="lab">${esc(nameOf(r.v, b.labels))}</span>` +
+    `<span class="vbar"><span class="good" style="width:${r.a / t * 100}%"></span><span class="bad" style="width:${r.m / t * 100}%"></span></span>` +
+    `<span class="pct">${pc(r.a, t)}</span><span class="cnt">из ${fmt(t)}</span></div>`; };
+  const cap = 10;
+  let s = `<p class="vsum"><b>${pc(sa, sa + sm)}</b>${esc(A)} в среднем <span><i class="sw" style="background:var(--good)"></i>${esc(A)}</span><span><i class="sw" style="background:var(--bad)"></i>${esc(M)}</span></p><div class="hbars">`;
+  s += rows.slice(0, cap).map(row).join('');
+  if (rows.length > cap) s += `<details class="more"><summary>ещё ${rows.length - cap}</summary>${rows.slice(cap).map(row).join('')}</details>`;
+  return s + `</div><p class="foot">сначала худшие; справа — доля «${esc(A)}» и сколько раз встречалась</p>`;
+}
+
+// Several breakdowns of one user property (store) as one table.
+function storeMatrix(items) {
+  const b0 = items[0].b, vals = [...new Set(items.flatMap(x => x.data.rows.map(r => r.v)))];
+  const tot = items.map(x => x.data.rows.reduce((s, r) => s + r.n, 0) || 1);
+  let s = `<div class="sub wide2"><table class="matrix"><thead><tr><th>${esc(b0.col)}</th>` +
+    items.map(x => `<th class="n" title="${esc(x.b.event)}">${esc(x.b.short || shortT(x.b))}</th>`).join('') + '</tr></thead><tbody>';
+  vals.forEach(v => {
+    s += `<tr><td title="${esc(v)}">${esc(nameOf(v, b0.labels))}</td>` + items.map((x, i) => {
+      const r = x.data.rows.find(r => r.v === v);
+      return `<td class="n">${r ? `${fmt(r.n)} <small>${pc(r.n, tot[i])}</small>` : '–'}</td>`;
+    }).join('') + '</tr>';
+  });
+  return s + '</tbody></table><p class="foot">сколько раз и доля в столбце; события без метки магазина (старые версии) не считаются</p></div>';
 }
 
 // ---------------------------------------------------------------- all games

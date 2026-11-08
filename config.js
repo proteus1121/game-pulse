@@ -177,9 +177,36 @@ window.GAME_PULSE = {
     store: {
       play: 'Google Play',
       huawei: 'AppGallery (Huawei)',
-      // Play builds before the one after 0.8.0 do not set the property
-      '(not set)': 'Google Play (старые версии без метки)',
     },
+    // Lift 13 (src: app/src/main/assets/game.js > an, lifts; mp.js > roles)
+    anomaly: {
+      lamp_red: 'Красная лампа', lamp_swing: 'Лампа качается', open_door: 'Открытая дверь', peephole: 'Глазок смотрит',
+      mirror_number: 'Зеркальный номер', stencil_wrong: 'Чужой этаж', tall_door: 'Высокая дверь', mail_open: 'Ящики открыты',
+      knock: 'Стук', mat_ceiling: 'Коврик на потолке', shoes_line: 'Чужая обувь', graffiti_change: 'Надпись',
+      window_face: 'Лицо в окне', footprints: 'Мокрые следы', behind_you: 'За спиной', long_hall: 'Длинный коридор',
+      extra_door: 'Дверь вместо окна', neighbor_faces: 'Сосед смотрит', neighbor_head: 'Голова назад',
+      neighbor_close: 'Сосед у лифта', neighbor_gone: 'Соседа нет', neighbor_tall: 'Высокий сосед', neighbor_arms: 'Длинные руки',
+      lamp_off: 'Лампа не горит', neighbor_twin: 'Два соседа', low_ceiling: 'Низкий потолок', red_sky: 'Красное небо',
+      door_same: 'Одинаковые номера', cabin_lcd: 'Табло врёт', cactus_gone: 'Подоконник пуст',
+      rules_changed: 'Правила изменились', crate_moved: 'Ящик выгрузили', lamp_on: 'Свет горит', self_open: 'Двери открылись сами',
+      none: 'Без аномалии (чисто)',
+    },
+    lift: {pass: 'Пассажирский', cargo: 'Грузовой', night: 'Ночной', endless: 'Без конца', daily: 'Рейс дня', mp: 'Вместе'},
+    // `from` of remove_ads_tap / full_show / ad_interstitial / share
+    from: {
+      menu: 'Главное меню', mp: 'Игра вместе', ride: 'Между этажами', end: 'Экран конца забега', pause: 'Пауза',
+      quit: 'Выход из забега', buy_cancel: 'После отмены покупки', win: 'Победа', endless: 'Без конца', daily: 'Рейс дня',
+    },
+    answer: {granted: 'Разрешил', denied: 'Запретил (окно системы)', declined: 'Отказался в игре'},
+    role: {lamp: 'Фонарщик', ear: 'Слухач', mech: 'Механик', med: 'Санитар'},
+    gift: {smoke: '+1 нерв', cat: 'Кот на 3 этажа', pies: '+1 открытие дверей', bat: 'Фонарик 100%'},
+    win: {'1': 'Доехали', '0': 'Не доехали'},
+    humans: {'1': 'Один (остальные боты)', '2': '2 человека', '3': '3 человека', '4': '4 человека'},
+    // Cat Sort (src: app/src/main/assets/i18n.js > it_*, room_*, boosters)
+    booster: {shelf: 'Полка', undo: 'Отмена хода', hint: 'Подсказка', shuffle: 'Перемешать', light: 'Фонарик'},
+    room: {bedroom: 'Спальня', bath: 'Ванная', play: 'Игровая', library: 'Библиотека', attic: 'Чердак', living: 'Гостиная', kitchen: 'Кухня', garden: 'Сад'},
+    houseItem: {b_window: 'Ночное окно', b_mobile: 'Мобиль', b_wardrobe: 'Шкаф', b_bed: 'Кровать', b_night: 'Тумбочка', b_rug: 'Коврик', w_mirror: 'Зеркало', w_sink: 'Раковина', w_tub: 'Ванна', w_towel: 'Полотенца', w_ducks: 'Уточки', w_mat: 'Коврик', p_wheel: 'Беговое колесо', p_slide: 'Горка', p_shelf: 'Игрушки', p_balls: 'Сухой бассейн', p_tunnel: 'Тоннель', p_mice: 'Мышки', l_books: 'Книжный шкаф', l_chair: 'Кресло', l_lamp: 'Торшер', l_globe: 'Глобус', l_painting: 'Картина', l_rug: 'Ковёр', a_window: 'Круглое окно', a_lamp: 'Лампочка', a_boxes: 'Коробки', a_trunk: 'Сундук', a_rocker: 'Кресло-качалка', a_hammock: 'Гамак', rug: 'Коврик', bed: 'Лежанка', bowls: 'Миски', plant: 'Цветок', window: 'Окно', tower: 'Когтеточка', painting: 'Картина', lamp: 'Лампа', shelf: 'Полочка', aquarium: 'Аквариум', k_clock: 'Часы', k_shelf: 'Банки', k_window: 'Окошко', k_fridge: 'Холодильник', k_mat: 'Коврик', k_table: 'Стол', k_basket: 'Клубочки', k_bowls: 'Золотые миски', g_tree: 'Дерево', g_feeder: 'Кормушка', g_fence: 'Заборчик', g_house: 'Будка', g_flowers: 'Клумба', g_hammock: 'Гамак', g_pond: 'Пруд', g_bush: 'Кусты'},
+    mode: {level: 'Обычные уровни', daily: 'Ежедневный', weekly: 'Недельный'},
   },
 
   // Per game (GA4 property id): which events and custom dimensions make up the
@@ -192,19 +219,24 @@ window.GAME_PULSE = {
   //   avgs     - per-level average of a custom metric on one event (fmt 'dur' = seconds, 'ms' = milliseconds)
   //   breakdowns - small tables: one event split by one param
   //   ordered  - levels are numbers played in order (enables "reached" and drop-off)
-  //   breakdown scope: 'user' - dim is a user property (customUser:), keepUnset - keep the "(not set)" row
+  //   levelLabels - valueLabels set for level names
+  //   breakdown: scope 'user' - dim is a user property (customUser:); labels - valueLabels set;
+  //              vs - a second event over the same dim, drawn as a/m share (found vs missed);
+  //              view - 'bars' | 'split' | 'hist' (picked from the values when left out);
+  //              hint - line under the title; short - column name in the store table.
+  //              Events without the param (versions that didn't send it yet) are ignored.
   games: {
     '558926253': { // cat-sort
       level: 'level', start: 'level_start', win: 'level_win', lose: 'level_lose', ordered: true,
       cols: [{event: 'booster', t: 'Бустеры'}],
       avgs: [{event: 'level_win', metric: 'sec', t: 'Время победы', fmt: 'dur'}, {event: 'level_win', metric: 'moves', t: 'Ходов'}],
       breakdowns: [
-        {event: 'booster', dim: 'k', t: 'Какие бустеры берут', col: 'Бустер'},
+        {event: 'booster', dim: 'k', t: 'Какие бустеры берут', col: 'Бустер', labels: 'booster'},
         {event: 'level_win', dim: 'stars', t: 'Звёзды за победу', col: 'Звёзд'},
-        {event: 'level_start', dim: 'mode', t: 'Режимы', col: 'Режим'},
-        {event: 'house_buy', dim: 'item', t: 'Котодом: покупки', col: 'Предмет'},
-        {event: 'house_build', dim: 'room', t: 'Котодом: построенные комнаты', col: 'Комната'},
-        {event: 'house_upgrade', dim: 'room', t: 'Котодом: улучшения комнат', col: 'Комната'},
+        {event: 'level_start', dim: 'mode', t: 'Режимы', col: 'Режим', labels: 'mode'},
+        {event: 'house_buy', dim: 'item', t: 'Котодом: покупки', col: 'Предмет', labels: 'houseItem'},
+        {event: 'house_build', dim: 'room', t: 'Котодом: построенные комнаты', col: 'Комната', labels: 'room'},
+        {event: 'house_upgrade', dim: 'room', t: 'Котодом: улучшения комнат', col: 'Комната', labels: 'room'},
         {event: 'iap_click', dim: 'id', t: 'Нажатия на покупки', col: 'Товар'},
         {event: 'iap_result', dim: 'code', t: 'Покупки: ответ Play', col: 'Ответ', labels: 'play'},
         {event: 'iap_result', dim: 'step', t: 'Покупки: где сорвалось', col: 'Шаг', labels: 'playStep'},
@@ -254,8 +286,8 @@ window.GAME_PULSE = {
       breakdowns: [
         {event: 'level_end', dim: 'reason', t: 'Чем кончаются ночи', col: 'Причина'},
         {event: 'level_end', dim: 'hour', t: 'В котором часу проигрывают', col: 'Час'},
-        {event: 'anomaly_missed', dim: 'anomaly', t: 'Какие аномалии пропускают', col: 'Аномалия'},
-        {event: 'anomaly_found', dim: 'anomaly', t: 'Какие аномалии находят', col: 'Аномалия'},
+        {event: 'anomaly_found', vs: 'anomaly_missed', dim: 'anomaly', a: 'нашли', m: 'пропустили', t: 'Какие аномалии замечают', col: 'Аномалия',
+         hint: 'доля найденных из всех появлений аномалии'},
         {event: 'false_alarm', dim: 'answer', t: 'Ложные тревоги: что отвечали', col: 'Ответ'},
         {event: 'chat_reply', dim: 'fx', t: 'Ответы в чате', col: 'Эффект'},
         {event: 'camera_fixed', dim: 'fault', t: 'Починенные камеры', col: 'Поломка'},
@@ -269,6 +301,7 @@ window.GAME_PULSE = {
       ],
     },
     '559461409': { // lift-13
+      levelLabels: 'lift',
       level: 'level_name', start: 'level_start', win: 'level_end', lose: 'level_end', outcome: 'success',
       cols: [{event: 'anomaly_found', t: 'Нашли аномалий'}, {event: 'anomaly_missed', t: 'Пропустили'}, {event: 'false_alarm', t: 'Ложные тревоги'},
              {event: 'run_continue', t: 'Продолжили'}, {event: 'run_quit', t: 'Бросили'},
@@ -279,36 +312,36 @@ window.GAME_PULSE = {
       avgs: [{event: 'level_end', metric: 'time', t: 'Время забега', fmt: 'dur'},
              {event: 'anomaly_found', metric: 'ms', t: 'Реакция на аномалию', fmt: 'ms'}],
       breakdowns: [
-        {event: 'anomaly_missed', dim: 'anomaly', t: 'Какие аномалии пропускают', col: 'Аномалия'},
-        {event: 'anomaly_found', dim: 'anomaly', t: 'Какие аномалии находят', col: 'Аномалия'},
+        {event: 'anomaly_found', vs: 'anomaly_missed', dim: 'anomaly', a: 'нашли', m: 'пропустили', t: 'Какие аномалии замечают', col: 'Аномалия',
+         labels: 'anomaly', hint: 'доля найденных из всех появлений аномалии'},
         {event: 'false_alarm', dim: 'floor', t: 'Ложные тревоги по этажам', col: 'Этаж'},
-        {event: 'gift_take', dim: 'gift', t: 'Подарки', col: 'Подарок'},
-        {event: 'level_end', dim: 'floor', t: 'На каком этаже проигрывают', col: 'Этаж'},
+        {event: 'gift_take', dim: 'gift', t: 'Подарки', col: 'Подарок', labels: 'gift'},
+        {event: 'level_end', dim: 'floor', t: 'На каком этаже проигрывают', col: 'Этаж', hint: 'этаж, на котором забег кончился ошибкой'},
         {event: 'run_quit', dim: 'floor', t: 'На каком этаже бросают забег', col: 'Этаж'},
-        {event: 'remove_ads_tap', dim: 'from', t: 'Откуда жмут «купить полную версию»', col: 'Откуда'},
+        {event: 'remove_ads_tap', dim: 'from', t: 'Откуда жмут «купить полную версию»', col: 'Откуда', labels: 'from'},
         {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play / Huawei', col: 'Ответ', labels: 'play'},
         {event: 'remove_ads_result', dim: 'step', t: 'Покупка «без рекламы»: где сорвалось', col: 'Шаг', labels: 'playStep'},
         {event: 'remove_ads_result', dim: 'msg', t: 'Покупка «без рекламы»: текст ошибки Play / Huawei', col: 'Текст'},
-        {event: 'ad_interstitial', dim: 'from', t: 'Межуровневая реклама: где', col: 'Где'},
-        {event: 'notif_perm', dim: 'result', t: 'Напоминания: ответ игрока', col: 'Ответ'},
-        {event: 'share', dim: 'from', t: 'Чем делятся', col: 'Откуда'},
+        {event: 'ad_interstitial', dim: 'from', t: 'Межуровневая реклама: где', col: 'Где', labels: 'from'},
+        {event: 'notif_perm', dim: 'result', t: 'Напоминания: ответ игрока', col: 'Ответ', labels: 'answer'},
+        {event: 'share', dim: 'from', t: 'Чем делятся', col: 'Откуда', labels: 'from'},
         {event: 'mp_end', dim: 'floor', t: 'Вместе: на каком этаже кончается матч', col: 'Этаж'},
-        {event: 'mp_floor', dim: 'anomaly', t: 'Вместе: аномалии на этажах', col: 'Аномалия'},
-        {event: 'mp_mic', dim: 'result', t: 'Вместе: микрофон', col: 'Ответ'},
-        {event: 'mp_start', dim: 'humans', t: 'Вместе: сколько людей в матче', col: 'Людей'},
-        {event: 'mp_start', dim: 'role', t: 'Вместе: роли', col: 'Роль'},
+        {event: 'mp_floor', dim: 'anomaly', t: 'Вместе: аномалии на этажах', col: 'Аномалия', labels: 'anomaly'},
+        {event: 'mp_mic', dim: 'result', t: 'Вместе: микрофон', col: 'Ответ', labels: 'answer'},
+        {event: 'mp_start', dim: 'humans', t: 'Вместе: сколько людей в матче', col: 'Людей', labels: 'humans'},
+        {event: 'mp_start', dim: 'role', t: 'Вместе: роли', col: 'Роль', labels: 'role'},
         {event: 'mp_end', dim: 'alive', t: 'Вместе: сколько доехало', col: 'Доехало'},
-        {event: 'mp_end', dim: 'success', t: 'Вместе: победы', col: 'Победа'},
+        {event: 'mp_end', dim: 'success', t: 'Вместе: доехали ли до конца', col: 'Итог', labels: 'win'},
         {event: 'mp_hunt', dim: 'floor', t: 'Вместе: охота по этажам', col: 'Этаж'},
-        {event: 'full_show', dim: 'from', t: 'Экран полной версии: откуда', col: 'Откуда'},
+        {event: 'full_show', dim: 'from', t: 'Экран полной версии: откуда', col: 'Откуда', labels: 'from'},
         // 0.9.5: why an ad never came (no fill is ad_nofill_pause)
         {event: 'ad_load_fail', dim: 'code', t: 'Реклама не загрузилась: код ошибки', col: 'Код'},
         {event: 'ad_consent_block', dim: 'result', t: 'Реклама запрещена согласием: статус', col: 'Статус'},
-        // store = user property (play / huawei), registered 2026-11-05 when the AppGallery build went to review
-        {event: 'first_open', dim: 'store', scope: 'user', keepUnset: true, t: 'Установки по магазинам', col: 'Магазин', labels: 'store'},
-        {event: 'level_start', dim: 'store', scope: 'user', keepUnset: true, t: 'Забеги по магазинам', col: 'Магазин', labels: 'store'},
-        {event: 'level_end', dim: 'store', scope: 'user', keepUnset: true, t: 'Законченные забеги по магазинам', col: 'Магазин', labels: 'store'},
-        {event: 'app_remove', dim: 'store', scope: 'user', keepUnset: true, t: 'Удаления по магазинам', col: 'Магазин', labels: 'store'},
+        // store = user property (play / huawei), registered 2026-11-05 when the AppGallery build went to review.
+        // first_open is sent before the property is set, so it is never split; events without it are ignored.
+        {event: 'level_start', dim: 'store', scope: 'user', t: 'Забеги по магазинам', short: 'Начали забег', col: 'Магазин', labels: 'store'},
+        {event: 'level_end', dim: 'store', scope: 'user', t: 'Законченные забеги по магазинам', short: 'Закончили забег', col: 'Магазин', labels: 'store'},
+        {event: 'app_remove', dim: 'store', scope: 'user', t: 'Удаления по магазинам', short: 'Удалили', col: 'Магазин', labels: 'store'},
       ],
     },
   },

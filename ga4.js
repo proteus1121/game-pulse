@@ -178,7 +178,9 @@
     (game.breakdowns || []).forEach((b, i) => {
       // scope 'user': a user property (e.g. store = play / huawei) instead of an event param
       const dim = b.scope === 'user' ? 'customUser:' + b.dim : cd(b.dim);
-      out['lv_br' + i] = rep([dim], ['eventCount', 'totalUsers'], ranges, eventIs(b.event), Object.assign({limit: 15}, top('eventCount')));
+      out['lv_br' + i] = rep([dim], ['eventCount', 'totalUsers'], ranges, eventIs(b.event), Object.assign({limit: 30}, top('eventCount')));
+      // vs: the same param on a second event (anomaly found vs missed)
+      if (b.vs) out['lv_br' + i + 'v'] = rep([dim], ['eventCount', 'totalUsers'], ranges, eventIs(b.vs), Object.assign({limit: 30}, top('eventCount')));
     });
     return out;
   }
