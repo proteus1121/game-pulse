@@ -184,7 +184,7 @@ window.GAME_PULSE = {
     anomaly: {
       lamp_red: 'Красная лампа', lamp_swing: 'Лампа качается', open_door: 'Открытая дверь', peephole: 'Глазок смотрит',
       mirror_number: 'Зеркальный номер', stencil_wrong: 'Чужой этаж', tall_door: 'Высокая дверь', mail_open: 'Ящики открыты',
-      knock: 'Стук', mat_ceiling: 'Коврик на потолке', shoes_line: 'Чужая обувь', graffiti_change: 'Надпись',
+      knock: 'Стук', mat_ceiling: 'Коврик на потолке', ballerina: 'Балерина', santa: 'Санта', shoes_line: 'Чужая обувь', graffiti_change: 'Надпись',
       window_face: 'Лицо в окне', footprints: 'Мокрые следы', behind_you: 'За спиной', long_hall: 'Длинный коридор',
       extra_door: 'Дверь вместо окна', neighbor_faces: 'Сосед смотрит', neighbor_head: 'Голова назад',
       neighbor_close: 'Сосед у лифта', neighbor_gone: 'Соседа нет', neighbor_tall: 'Высокий сосед', neighbor_arms: 'Длинные руки',
@@ -206,9 +206,13 @@ window.GAME_PULSE = {
     humans: {'1': 'Один (остальные боты)', '2': '2 человека', '3': '3 человека', '4': '4 человека'},
     // Cat Sort (src: app/src/main/assets/i18n.js > it_*, room_*, boosters)
     booster: {shelf: 'Полка', undo: 'Отмена хода', hint: 'Подсказка', shuffle: 'Перемешать', light: 'Фонарик'},
-    room: {bedroom: 'Спальня', bath: 'Ванная', play: 'Игровая', library: 'Библиотека', attic: 'Чердак', living: 'Гостиная', kitchen: 'Кухня', garden: 'Сад'},
-    houseItem: {b_window: 'Ночное окно', b_mobile: 'Мобиль', b_wardrobe: 'Шкаф', b_bed: 'Кровать', b_night: 'Тумбочка', b_rug: 'Коврик', w_mirror: 'Зеркало', w_sink: 'Раковина', w_tub: 'Ванна', w_towel: 'Полотенца', w_ducks: 'Уточки', w_mat: 'Коврик', p_wheel: 'Беговое колесо', p_slide: 'Горка', p_shelf: 'Игрушки', p_balls: 'Сухой бассейн', p_tunnel: 'Тоннель', p_mice: 'Мышки', l_books: 'Книжный шкаф', l_chair: 'Кресло', l_lamp: 'Торшер', l_globe: 'Глобус', l_painting: 'Картина', l_rug: 'Ковёр', a_window: 'Круглое окно', a_lamp: 'Лампочка', a_boxes: 'Коробки', a_trunk: 'Сундук', a_rocker: 'Кресло-качалка', a_hammock: 'Гамак', rug: 'Коврик', bed: 'Лежанка', bowls: 'Миски', plant: 'Цветок', window: 'Окно', tower: 'Когтеточка', painting: 'Картина', lamp: 'Лампа', shelf: 'Полочка', aquarium: 'Аквариум', k_clock: 'Часы', k_shelf: 'Банки', k_window: 'Окошко', k_fridge: 'Холодильник', k_mat: 'Коврик', k_table: 'Стол', k_basket: 'Клубочки', k_bowls: 'Золотые миски', g_tree: 'Дерево', g_feeder: 'Кормушка', g_fence: 'Заборчик', g_house: 'Будка', g_flowers: 'Клумба', g_hammock: 'Гамак', g_pond: 'Пруд', g_bush: 'Кусты'},
-    mode: {level: 'Обычные уровни', daily: 'Ежедневный', weekly: 'Недельный'},
+    room: {bedroom: 'Спальня', bath: 'Ванная', play: 'Игровая', library: 'Библиотека', attic: 'Чердак', living: 'Гостиная', kitchen: 'Кухня', garden: 'Сад',
+      hospital: 'Котоград: больница', police: 'Котоград: полиция', church: 'Котоград: церковь', castle: 'Котоград: замок'},
+    kind: {plain: 'Обычный', hard: 'Сложный', boss: 'Босс', speed: 'Гонка', puzzle: 'Головоломка', order: 'Голодный котик', daily: 'Ежедневный', weekly: 'Недельный', marathon: 'Марафон'},
+    place: {house: 'Котодом', town: 'Котоград'},
+    houseItem: {hs_cross: 'Красный крест', hs_xray: 'Рентген', hs_chart: 'Таблица для глаз', hs_drip: 'Капельница', hs_bed: 'Койка', hs_scale: 'Весы', hs_cabinet: 'Аптечный шкаф', pd_siren: 'Мигалка', pd_board: 'Доска «Розыск»', pd_map: 'Карта города', pd_locker: 'Шкафчики', pd_desk: 'Стол дежурного', pd_cooler: 'Кулер', pd_cell: 'Камера', ch_rose: 'Окно-роза', ch_window: 'Витраж', ch_flowers: 'Цветы', ch_candles: 'Подсвечник', ch_rug: 'Дорожка', ch_pews: 'Скамьи', ch_organ: 'Орган', ca_banner: 'Знамя', ca_shield: 'Щит и мечи', ca_chandelier: 'Люстра', ca_armor: 'Доспехи', ca_carpet: 'Королевский ковёр', ca_chest: 'Сундук с сокровищами', ca_throne: 'Трон',
+      b_window: 'Ночное окно', b_mobile: 'Мобиль', b_wardrobe: 'Шкаф', b_bed: 'Кровать', b_night: 'Тумбочка', b_rug: 'Коврик', w_mirror: 'Зеркало', w_sink: 'Раковина', w_tub: 'Ванна', w_towel: 'Полотенца', w_ducks: 'Уточки', w_mat: 'Коврик', p_wheel: 'Беговое колесо', p_slide: 'Горка', p_shelf: 'Игрушки', p_balls: 'Сухой бассейн', p_tunnel: 'Тоннель', p_mice: 'Мышки', l_books: 'Книжный шкаф', l_chair: 'Кресло', l_lamp: 'Торшер', l_globe: 'Глобус', l_painting: 'Картина', l_rug: 'Ковёр', a_window: 'Круглое окно', a_lamp: 'Лампочка', a_boxes: 'Коробки', a_trunk: 'Сундук', a_rocker: 'Кресло-качалка', a_hammock: 'Гамак', rug: 'Коврик', bed: 'Лежанка', bowls: 'Миски', plant: 'Цветок', window: 'Окно', tower: 'Когтеточка', painting: 'Картина', lamp: 'Лампа', shelf: 'Полочка', aquarium: 'Аквариум', k_clock: 'Часы', k_shelf: 'Банки', k_window: 'Окошко', k_fridge: 'Холодильник', k_mat: 'Коврик', k_table: 'Стол', k_basket: 'Клубочки', k_bowls: 'Золотые миски', g_tree: 'Дерево', g_feeder: 'Кормушка', g_fence: 'Заборчик', g_house: 'Будка', g_flowers: 'Клумба', g_hammock: 'Гамак', g_pond: 'Пруд', g_bush: 'Кусты'},
+    mode: {level: 'Обычные уровни', daily: 'Ежедневный', weekly: 'Недельный', marathon: 'Марафон'},
   },
 
   // Per game (GA4 property id): which events and custom dimensions make up the
@@ -232,10 +236,15 @@ window.GAME_PULSE = {
       level: 'level', start: 'level_start', win: 'level_win', lose: 'level_lose', ordered: true,
       cols: [{event: 'booster', t: 'Бустеры'}],
       avgs: [{event: 'level_win', metric: 'sec', t: 'Время победы', fmt: 'dur'}, {event: 'level_win', metric: 'moves', t: 'Ходов'}],
+      // marathon_end carries level = the board the clock ran out on; shelves = the score
       breakdowns: [
         {event: 'booster', dim: 'k', t: 'Какие бустеры берут', col: 'Бустер', labels: 'booster'},
         {event: 'level_win', dim: 'stars', t: 'Звёзды за победу', col: 'Звёзд'},
         {event: 'level_start', dim: 'mode', t: 'Режимы', col: 'Режим', labels: 'mode'},
+        {event: 'level_lose', dim: 'kind', t: 'Проигрыши по типу уровня (с 1.7.0)', col: 'Тип', labels: 'kind'},
+        {event: 'level_leave', dim: 'kind', t: 'Уходы из уровня по типу (с 1.7.0)', col: 'Тип', labels: 'kind'},
+        {event: 'marathon_end', dim: 'level', t: 'Марафон: на каком поле кончилось время', col: 'Поле', view: 'hist'},
+        {event: 'house_buy', dim: 'place', t: 'Покупки: дом или город', col: 'Где', labels: 'place'},
         {event: 'house_buy', dim: 'item', t: 'Котодом: покупки', col: 'Предмет', labels: 'houseItem'},
         {event: 'house_build', dim: 'room', t: 'Котодом: построенные комнаты', col: 'Комната', labels: 'room'},
         {event: 'house_upgrade', dim: 'room', t: 'Котодом: улучшения комнат', col: 'Комната', labels: 'room'},
