@@ -80,6 +80,8 @@ window.GAME_PULSE = {
     full_show: 'Открыл экран полной версии',
     ad_load_fail: 'Реклама не загрузилась (ошибка, не no fill)',
     ad_consent_block: 'Реклама запрещена согласием (UMP)',
+    floor1_down: 'Нажал ▼ на 1-м этаже (он всегда нормальный, без штрафа)',
+    mp_ad: 'Вместе: ещё поездка за рекламу',
     remove_ads_click: 'Нажал «убрать рекламу»',
     remove_ads_result: 'Ответ Google Play на покупку (не купил)',
     remove_ads_bought: 'Купил отключение рекламы',
@@ -308,7 +310,9 @@ window.GAME_PULSE = {
              // together (mp.js, 2026-11-05): searches, matches started / finished
              {event: 'mp_search', t: 'Вместе: поиск'}, {event: 'mp_start', t: 'Вместе: матчи'}, {event: 'mp_end', t: 'Вместе: доиграли'},
              // 0.9.1: without the full version one ride together a day; mp_limit = hit it, full_show = the full version screen
-             {event: 'mp_limit', t: 'Вместе: упёрлись в лимит'}, {event: 'full_show', t: 'Экран полной версии'}],
+             {event: 'mp_limit', t: 'Вместе: упёрлись в лимит'}, {event: 'full_show', t: 'Экран полной версии'},
+             // 0.9.7: ▼ on floor 1 no longer a false alarm
+             {event: 'floor1_down', t: '▼ на 1-м этаже'}],
       avgs: [{event: 'level_end', metric: 'time', t: 'Время забега', fmt: 'dur'},
              {event: 'anomaly_found', metric: 'ms', t: 'Реакция на аномалию', fmt: 'ms'}],
       breakdowns: [
@@ -337,6 +341,10 @@ window.GAME_PULSE = {
         // 0.9.5: why an ad never came (no fill is ad_nofill_pause)
         {event: 'ad_load_fail', dim: 'code', t: 'Реклама не загрузилась: код ошибки', col: 'Код'},
         {event: 'ad_consent_block', dim: 'result', t: 'Реклама запрещена согласием: статус', col: 'Статус'},
+        {event: 'ad_consent_block', dim: 'msg', t: 'Реклама запрещена согласием: ошибка UMP', col: 'Ошибка'},
+        // 0.9.7: a rewarded video for one more ride together (tap / earned / not_earned)
+        {event: 'mp_ad', dim: 'result', t: 'Вместе: поездка за рекламу', col: 'Результат'},
+        {event: 'tutorial', dim: 'found', t: 'Туториал: нашли открытую дверь (1) / нет (0)', col: 'Нашли'},
         // store = user property (play / huawei), registered 2026-11-05 when the AppGallery build went to review.
         // first_open is sent before the property is set, so it is never split; events without it are ignored.
         {event: 'level_start', dim: 'store', scope: 'user', t: 'Забеги по магазинам', short: 'Начали забег', col: 'Магазин', labels: 'store'},
