@@ -172,6 +172,56 @@ details.more > summary { cursor: pointer; color: var(--accent); font-size: 12px;
 svg.hist text { font-size: 9px; }
 .wide2 { grid-column: 1 / -1; }
 table.matrix small { color: var(--muted); font-size: 11px; margin-left: 4px; }
+/* two sections: the last 30 minutes, the selected period */
+.block { display: flex; flex-direction: column; gap: 20px; }
+h2.sec { font-size: 15px; color: var(--fg); text-transform: none; letter-spacing: 0; margin: 0; }
+.sechead .note { flex: 1 1 240px; }
+.secline { border: 0; border-top: 1px solid var(--line); margin: 8px 0 0; width: 100%; }
+/* players: one row per player with a time strip; a click opens the step-by-step journey */
+.legend.kinds { gap: 6px 16px; margin-bottom: 10px; }
+svg.mk { display: inline-block; width: 12px; height: 14px; vertical-align: -2px; margin-right: 4px; flex: none; overflow: visible; }
+table.players td { vertical-align: middle; }
+table.players td small { display: block; color: var(--muted); font-size: 11px; }
+tr.pl { cursor: pointer; }
+tr.pl:hover td, tr.pl.open td { background: var(--accent-soft); }
+tr.pl:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+td.who > span { display: inline-block; vertical-align: top; }
+.cc { display: inline-block; vertical-align: top; font: 600 10px var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; margin: 2px 8px 0 0; color: var(--muted); }
+.newdot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good); margin-left: 6px; vertical-align: 2px; }
+.muted { color: var(--muted); }
+.ok { color: var(--good); }
+th.axis, td.tl { width: 50%; min-width: 300px; padding-left: 4px; padding-right: 4px; }
+th.axis { vertical-align: bottom; }
+svg.strip { width: 100%; }
+svg.strip text { font-size: 10px; }
+svg.axis text { font-size: 11px; }
+tr.detail > td { background: color-mix(in srgb, var(--accent-soft) 40%, transparent); white-space: normal; padding: 12px 14px; }
+.jsess { margin-bottom: 14px; max-width: 760px; }
+.jsess h4 { margin: 0 0 4px; font-size: 13px; font-weight: 600; display: inline; }
+.jsess > summary { cursor: pointer; list-style: none; margin-bottom: 4px; }
+.jsess > summary::-webkit-details-marker { display: none; }
+.jsess > summary h4::before { content: '▸ '; color: var(--muted); }
+.jsess[open] > summary h4::before { content: '▾ '; }
+.jsess h4 .note { font-weight: 400; }
+.jlist { display: flex; flex-direction: column; margin-top: 6px; }
+.jrow { display: grid; grid-template-columns: 92px 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 2px 0; font-size: 13px; border-bottom: 1px dashed var(--line); }
+.jrow .tm { font: 12px var(--mono); color: var(--muted); }
+.jrow .tx { overflow: hidden; text-overflow: ellipsis; }
+.jrow.k-bad .tx { color: var(--bad); font-weight: 600; }
+.jrow.k-money .tx { font-weight: 500; }
+.ctrl { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 4px 0 10px; }
+.ctrl input, .ctrl select { font: 13px var(--sans); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; }
+.ctrl input { flex: 0 1 300px; min-width: 0; }
+.morebtn { margin-top: 10px; }
+.funnel { max-width: 720px; margin-bottom: 12px; }
+.funnel .lab { display: flex; align-items: center; }
+.funnel .hrow { grid-template-columns: minmax(150px, 34%) 1fr 40px auto; }
+/* retention: heat cells, one hue, text stays in the text colour */
+table.ret td.rc { font-family: var(--mono); min-width: 64px; }
+table.ret td.rc.empty { color: var(--muted); }
+table.ret td, table.ret th { padding: 5px 8px; }
+#retCards { margin-bottom: 8px; }
+.panel.loading table { opacity: .5; transition: opacity .2s; }
 .empty, .err { color: var(--muted); font-size: 13px; padding: 8px 0; }
 .err { color: var(--bad); font-family: var(--mono); font-size: 12px; word-break: break-word; }
 .note { color: var(--muted); font-size: 12px; }
@@ -223,6 +273,8 @@ table.matrix small { color: var(--muted); font-size: 11px; margin-left: 4px; }
   </div>
 
   <main id="app" hidden>
+  <section class="block" id="liveBlock">
+  <div class="sechead"><h2 class="sec">Последние 30 минут</h2><span class="note">Realtime GA4, обновляется каждую минуту</span></div>
   <section class="panel ovlive" id="ovLive" hidden>
     <div>
       <h2>Сейчас во всех играх</h2>
@@ -242,13 +294,34 @@ table.matrix small { color: var(--muted); font-size: 11px; margin-left: 4px; }
     </div>
   </section>
 
-  <section id="periodSection">
+  <section class="panel" id="livePlayersPanel">
+    <h2 id="livePlayersTitle">Кто играет</h2>
+    <div class="legend kinds" id="liveKinds"></div>
+    <div id="livePlayers"><div class="empty">Загрузка…</div></div>
+  </section>
+
+  <section class="grid" id="liveGrid">
+    <div class="panel"><h2>События, 30 мин</h2><div class="tbl" id="rtEvents"></div></div>
+    <div class="panel"><h2>Страны, 30 мин</h2><div class="tbl" id="rtCountries"></div></div>
+  </section>
+  </section>
+
+  <hr class="secline">
+
+  <section id="periodSection" class="block">
     <div class="sechead">
-      <h2 id="periodTitle">Сегодня</h2>
+      <h2 class="sec" id="periodTitle">Сегодня</h2>
       <div class="seg" id="periods" role="group" aria-label="Период"></div>
     </div>
     <div class="tiles" id="tiles"></div>
-    <p class="note" id="filterNote"></p>
+    <p class="note" id="filterNote" style="margin:0"></p>
+    <div class="panel" id="playersPanel">
+      <h2 id="playersTitle">Игроки</h2>
+      <p class="hint">Что делали игроки: доля от всех, кто заходил за период. Ниже — каждый игрок отдельно.</p>
+      <div id="playersFunnel"></div>
+      <div class="legend kinds" id="periodKinds"></div>
+      <div id="players"><div class="empty">Загрузка…</div></div>
+    </div>
   </section>
 
   <section class="grid" id="charts">
@@ -262,6 +335,14 @@ table.matrix small { color: var(--muted); font-size: 11px; margin-left: 4px; }
       <div class="legend"><span><i></i>активные</span><span><i class="n"></i>новые</span><span id="daysHint"></span></div>
       <div class="chart" id="days"></div>
     </div>
+    <div class="panel wide" id="retPanel">
+      <h2>Возвращаемость (retention)</h2>
+      <p class="hint">Из игроков, впервые открывших игру в этот день, — сколько зашли снова через N дней. Новые игроки за последние 5 недель, не зависит от выбранного периода.</p>
+      <div class="insights" id="retCards"></div>
+      <div class="chart" id="retCurve"></div>
+      <div id="retention"><div class="empty">Загрузка…</div></div>
+      <p class="foot">Чем темнее клетка, тем больше вернулись. Серым — меньше 10 игроков в базе, точка — день ещё не прошёл. Наведи на клетку — сколько из скольких.</p>
+    </div>
     <div class="panel wide" id="levelsPanel" hidden>
       <h2 id="levelsTitle">Уровни</h2>
       <div class="insights" id="levelsInsights"></div>
@@ -271,8 +352,6 @@ table.matrix small { color: var(--muted); font-size: 11px; margin-left: 4px; }
       <p class="note" id="levelsNote"></p>
     </div>
     <div id="breakdowns" class="contents"></div>
-    <div class="panel"><h2>События, 30 мин</h2><div class="tbl" id="rtEvents"></div></div>
-    <div class="panel"><h2>Страны, 30 мин</h2><div class="tbl" id="rtCountries"></div></div>
     <div class="panel"><h2>События игры</h2><div class="tbl" id="events"></div></div>
     <div class="panel" id="reasonsPanel"><h2 id="reasonsTitle">Ошибки покупок</h2><div class="tbl" id="reasons"></div></div>
     <div class="panel" id="lossesPanel"><h2 id="lossesTitle">Причины проигрышей</h2><div class="tbl" id="losses"></div></div>
@@ -286,6 +365,11 @@ table.matrix small { color: var(--muted); font-size: 11px; margin-left: 4px; }
       <p class="hint">Цветная полоса — выбранный период, тонкая чёрточка — предыдущий такой же период. Процент — изменение к нему.</p>
       <div class="insights" id="ovInsights"></div>
       <div class="cmpgrid" id="ovCmp"></div>
+    </div>
+    <div class="panel wide">
+      <h2>Возвращаемость (retention)</h2>
+      <p class="hint">Доля новых игроков за последние 5 недель, которые зашли снова через N дней. Нажми на строку, чтобы открыть игру.</p>
+      <div id="ovRetention"><div class="empty">Загрузка…</div></div>
     </div>
     <div class="panel wide">
       <h2 id="ovDaysTitle">Игроки по дням</h2>
@@ -305,6 +389,8 @@ table.matrix small { color: var(--muted); font-size: 11px; margin-left: 4px; }
 
 <script src="config.js"></script>
 <script src="ga4.js"></script>
+<script src="journey.js"></script>
+<script src="retention.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
 const RT_EVERY = 60e3, REPORTS_EVERY = 300e3;
@@ -367,7 +453,7 @@ function renderPeriods() {
     `<button type="button" data-p="${k}" aria-pressed="${k === period}">${p.btn}</button>`).join('');
   $('periods').querySelectorAll('button').forEach(b => b.onclick = () => setPeriod(b.dataset.p));
   const P = PERIODS[period];
-  $('periodTitle').textContent = P.title;
+  $('periodTitle').textContent = 'За период · ' + P.title;
   $('reasonsTitle').textContent = 'Ошибки покупок ' + P.where;
   $('lossesTitle').textContent = 'Причины проигрышей ' + P.where;
   $('versionsTitle').textContent = 'Версии ' + P.where;
@@ -375,7 +461,7 @@ function renderPeriods() {
   $('countriesTitle').textContent = 'Страны ' + P.where;
   $('ovCmpTitle').textContent = 'Игры рядом ' + P.where;
   $('ovTableTitle').textContent = 'Сводка по играм ' + P.where;
-  if (current === ALL) $('periodTitle').textContent = 'Все игры вместе · ' + P.title;
+  if (current === ALL) $('periodTitle').textContent = 'За период · все игры вместе · ' + P.title;
   $('hoursPanel').hidden = !(period === 'today' || period === 'yesterday');
   $('hoursCur').textContent = P.cur;
   $('hoursPrev').textContent = P.prev;
@@ -386,6 +472,7 @@ function select(id) {
   const all = id === ALL;
   $('ovLive').hidden = !all; $('ovCharts').hidden = !all;
   $('gameLive').hidden = all; $('charts').hidden = all;
+  $('liveGrid').hidden = all; $('playersPanel').hidden = all;
   renderPeriods();
   if (all) loadOverview();
   else { loadRealtime(); loadReports(); }
@@ -500,6 +587,7 @@ async function loadRealtime() {
   if (!current) return;
   if (current === ALL) return loadOverview();
   const id = current;
+  Journey.live([id]);
   try {
     const d = await GA4.realtime(id);
     if (id !== current) return;
@@ -519,6 +607,8 @@ async function loadReports() {
   if (current === ALL) return loadOverview();
   const id = current, p = period;
   document.body.classList.add('loading');
+  Journey.period(id, p);
+  Retention.game(id);
   try {
     const d = await GA4.reports(id, p);
     if (id !== current || p !== period) return;
@@ -916,6 +1006,8 @@ async function loadOverview() {
   if (current !== ALL || !props.length) return;
   const p = period;
   document.body.classList.add('loading');
+  Journey.live(props.map(x => x.id));
+  Retention.all(props.map(x => x.id));
   try {
     const d = await GA4.overview(props.map(x => x.id), p);
     if (current !== ALL || p !== period) return;
@@ -1097,6 +1189,7 @@ function init() {
   const savedPeriod = store('gp.period');
   if (PERIODS[savedPeriod]) period = savedPeriod;
   renderPeriods();
+  $('liveKinds').innerHTML = $('periodKinds').innerHTML = Journey.legend();
   const C = window.GAME_PULSE, ex = C.excludeCountries.map(c => 'страна ' + c);
   if (C.excludeDeviceRegex) ex.push('устройства ' + C.excludeDeviceRegex + ' (роботы Play)');
   $('filterNote').textContent = 'Исключены: ' + ex.join(', ') + '. Live-блоки фильтруются только по стране. Данные за сегодня GA4 отдаёт с задержкой от нескольких минут до пары часов. Неделя и месяц включают сегодняшний день; активные за период считаются уникальными игроками, а не суммой по дням.';

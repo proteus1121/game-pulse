@@ -185,9 +185,78 @@
     return out;
   }
 
+  // ------------------------------------------------------------ players
+  // GA4 hands out no player id, so a player is what the Data API can tell
+  // apart: country + city + phone model + Android version. The game version
+  // is not part of it - it changes when the player updates.
+  const PKEY = ['countryId', 'cityId', 'deviceModel', 'operatingSystemVersion'];
+  const notEvents = names => ({notExpression: {filter: {fieldName: 'eventName', inListFilter: {values: names}}}});
+  // GA4's automatic events, minus the ones that mean something in a journey (session_start...).
+  const noise = () => (CFG.hiddenEvents || []).filter(e => !(CFG.journeyKeep || []).includes(e));
+
+  // Which params a journey shows for a game: config.js > games > journey, else
+  // picked from the level funnel and breakdowns already set up there.
+  function journeyCfg(game) {
+    if (!game) return {mode: null, step: [], detail: [], store: null};
+    const j = game.journey || {};
+    const mode = j.mode || (game.start && game.level ? {event: game.start, dim: game.level, labels: game.levelLabels} : null);
+    const evDims = (game.breakdowns || []).filter(b => b.scope !== 'user').map(b => b.dim);
+    const uniq = a => [...new Set(a.filter(Boolean))];
+    // 9 dimensions per request, and the filters' fields (country) count too: 2 params fit
+    const step = uniq(j.step || [mode && mode.dim, game.outcome]).slice(0, 2);
+    const detail = uniq(j.detail || step.concat([game.level], evDims)).slice(0, 7);
+    const st = (game.breakdowns || []).find(b => b.scope === 'user');
+    return {mode, step, detail, store: st ? st.dim : null};
+  }
+
+  // A cur-period range; month is read by the hour (a month by the minute is megabytes).
+  function periodRange(period) {
+    const [start, end] = PERIODS[period];
+    return {range: [{startDate: ago(start), endDate: ago(end)}], grain: period === 'month' ? 'dateHour' : 'dateHourMinute'};
+  }
+
+  function playerReports(period, game) {
+    const {range, grain} = periodRange(period), J = journeyCfg(game);
+    const rep = (d, m, extra, more) => withFilter(Object.assign({dateRanges: range, dimensions: dims(d), metrics: dims(m)}, more), false, extra);
+    const out = {
+      // what each player did, minute by minute (with a few params: mode, outcome...)
+      pl_steps: rep(PKEY.concat(['eventName', grain], J.step.map(cd)), ['eventCount'], notEvents(noise()), {limit: 100000}),
+      // who they are: phone name, city, version, sessions, time
+      pl_who: rep(PKEY.concat(['city', 'mobileDeviceBranding', 'mobileDeviceMarketingName', 'appVersion']),
+        ['activeUsers', 'newUsers', 'sessions', 'userEngagementDuration'], null, {limit: 50000}),
+    };
+    if (J.store) out.pl_store = rep(PKEY.concat(['customUser:' + J.store]), ['activeUsers'], null, {limit: 50000});
+    return out;
+  }
+
+  // Last 30 minutes: the Realtime API takes 4 dimensions at most and has no
+  // phone model or event params, so the phone comes from the last 7 days of
+  // regular reports for the same city and game version.
+  function livePlayerReports(game) {
+    const J = journeyCfg(game);
+    // A filter's field counts toward those 4, so the country exclusion is done
+    // on the page (lp_cc maps country ids to the names in config.js).
+    const rt = (d, m, extra) => Object.assign({dimensions: dims(d), metrics: dims(m), limit: 10000}, extra ? {dimensionFilter: extra} : {});
+    const out = {
+      lp_steps: rt(['minutesAgo', 'eventName', 'cityId', 'appVersion'], ['eventCount'], notEvents(noise())),
+      lp_who: rt(['cityId', 'city', 'countryId', 'appVersion'], ['activeUsers']),
+      lp_cc: rt(['countryId', 'country'], ['activeUsers']),
+    };
+    if (J.store) out.lp_store = rt(['cityId', 'appVersion', 'customUser:' + J.store], ['activeUsers']);
+    return out;
+  }
+
+  const deviceLookup = () => withFilter({dateRanges: [{startDate: '6daysAgo', endDate: 'today'}],
+    dimensions: dims(['countryId', 'cityId', 'appVersion', 'deviceModel', 'mobileDeviceBranding', 'mobileDeviceMarketingName', 'operatingSystemVersion']),
+    metrics: dims(['activeUsers']), limit: 50000}, false);
+
   // Used when a property has no such custom dimension (GA4 answers 400
   // "... is not a valid dimension"): same report without that column.
+  const dropDim = name => body => Object.assign({}, body, {dimensions: body.dimensions.filter(d => d.name !== name)});
   const FALLBACKS = {fail_reasons: body => Object.assign({}, body, {dimensions: dims(['eventName'])})};
+  // Player reports lose just the param GA4 doesn't know, as many times as needed.
+  const DROPPABLE = /^(pl_|pd_)/;
+  const badDim = msg => (/Field (\S+) is not a valid dimension/.exec(msg) || [])[1];
 
   const cache = new Map();
 
@@ -241,7 +310,14 @@
     const url = DATA + prop + ':' + method;
     const entries = await Promise.all(Object.entries(reports).map(async ([name, body]) => {
       try {
-        return [name, {rows: rows(await dataCall(prop, url, body))}];
+        for (let tries = 0; ; tries++) {
+          try { return [name, {rows: rows(await dataCall(prop, url, body)), dims: body.dimensions.map(d => d.name)}]; }
+          catch (e) {
+            const bad = DROPPABLE.test(name) && tries < 6 && badDim(e.message);
+            if (!bad || !body.dimensions.some(d => d.name === bad)) throw e;
+            body = dropDim(bad)(body);
+          }
+        }
       } catch (e) {
         if (e instanceof NeedLogin) throw e;
         if (FALLBACKS[name] && /is not a valid dimension/.test(e.message)) {
@@ -252,6 +328,8 @@
       }
     }));
     const value = Object.fromEntries(entries);
+    // when the data was read: realtime "minutes ago" counts from here
+    value._at = Date.now();
     // Don't keep a group that hit quota errors, so the next load tries again.
     if (!entries.some(([, v]) => v.error && /HTTP 429/.test(v.error))) cache.set(ck, {at: Date.now(), value});
     return value;
@@ -329,6 +407,82 @@
     return Object.assign({games: byProp}, propertyDays(tz, period));
   }
 
+  // Retention: one cohort per day of first session for the last 35 days, and
+  // how many of each were active on day N (up to 28) after it. Days are the property's own.
+  const RET_DAYS = 28, RET_COHORTS = 35;
+  function tzToday(tz) {
+    let p;
+    try {
+      const f = new Intl.DateTimeFormat('en-CA', {timeZone: tz || undefined, year: 'numeric', month: '2-digit', day: '2-digit'});
+      p = Object.fromEntries(f.formatToParts(new Date()).map(x => [x.type, x.value]));
+    } catch { const d = new Date(); p = {year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate()}; }
+    return Date.UTC(+p.year, +p.month - 1, +p.day);
+  }
+  async function retention(prop) {
+    const tz = await timeZone(prop), today = tzToday(tz);
+    const iso = n => new Date(today - n * 864e5).toISOString().slice(0, 10);
+    const cohorts = Array.from({length: RET_COHORTS}, (_, i) => ({name: 'c' + iso(i + 1).replace(/-/g, ''),
+      dimension: 'firstSessionDate', dateRange: {startDate: iso(i + 1), endDate: iso(i + 1)}}));
+    // cohortActiveUsers only: with a filter cohortTotalUsers drifts row to row, day 0 is the cohort size
+    const body = withFilter({dimensions: dims(['cohort', 'cohortNthDay']), metrics: dims(['cohortActiveUsers']), limit: 10000,
+      cohortSpec: {cohorts, cohortsRange: {granularity: 'DAILY', startOffset: 0, endOffset: RET_DAYS}}}, false);
+    const d = await runGroup(prop, 'ret', {ret: body}, 'runReport', CFG.reportsCacheSec);
+    return {ret: d.ret, today: iso(0).replace(/-/g, ''), days: RET_DAYS, tz};
+  }
+  async function retentionAll(propIds) {
+    return Object.fromEntries(await Promise.all(propIds.map(async id => {
+      try { return [id, await retention(id)]; }
+      catch (e) { if (e instanceof NeedLogin) throw e; return [id, {ret: {error: e.message}}]; }
+    })));
+  }
+
+  // Who played in the last 30 minutes, per property; a property that fails keeps its error.
+  async function livePlayers(propIds) {
+    const one = async prop => {
+      const game = (CFG.games || {})[prop];
+      try {
+        const [rt, dev, tz] = await Promise.all([
+          runGroup(prop, 'lp', livePlayerReports(game), 'runRealtimeReport', CFG.realtimeCacheSec),
+          runGroup(prop, 'dev', {devices: deviceLookup()}, 'runReport', CFG.reportsCacheSec),
+          timeZone(prop),
+        ]);
+        return [prop, Object.assign({}, dev, rt, {tz, at: rt._at})];
+      } catch (e) {
+        if (e instanceof NeedLogin) throw e;
+        return [prop, {error: e.message}];
+      }
+    };
+    return Object.fromEntries(await Promise.all(propIds.map(one)));
+  }
+
+  async function players(prop, period) {
+    const game = (CFG.games || {})[prop];
+    const [data, tz] = await Promise.all([
+      runGroup(prop, 'pl:' + period, playerReports(period, game), 'runReport', CFG.reportsCacheSec),
+      timeZone(prop),
+    ]);
+    return Object.assign({}, data, propertyDays(tz, period), {tz});
+  }
+
+  // One player's every event in the period, by the minute, with all the journey
+  // params. The player filter takes 5 of the 9 dimensions, so it is one report
+  // for the steps and one per param (minute + event + param), joined on the page.
+  async function playerDetail(prop, period, p) {
+    const J = journeyCfg((CFG.games || {})[prop]);
+    const [start, end] = PERIODS[period];
+    const key = PKEY.map(k => ({filter: {fieldName: k, stringFilter: {value: p[k] || ''}}}));
+    const body = extra => withFilter({
+      dateRanges: [{startDate: ago(start), endDate: ago(end)}],
+      dimensions: dims(['dateHourMinute', 'eventName'].concat(extra)),
+      metrics: dims(['eventCount']), limit: 10000,
+    }, false, {andGroup: {expressions: key.concat([notEvents(noise())])}});
+    const reports = {pd_steps: body([])};
+    J.detail.forEach((dim, i) => reports['pd_p' + i] = body([cd(dim)]));
+    const k = 'pd:' + period + ':' + PKEY.map(x => p[x]).join('|');
+    return runGroup(prop, k, reports, 'runReport', CFG.reportsCacheSec);
+  }
+
   window.GA4 = {NeedLogin, initAuth, signIn, signOut, signedIn, properties, realtime, reports, overview,
+                livePlayers, players, playerDetail, journeyCfg, PKEY, retention, retentionAll,
                 clearCache: () => cache.clear(), PERIODS};
 })();

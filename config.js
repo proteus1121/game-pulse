@@ -34,6 +34,8 @@ window.GAME_PULSE = {
   hiddenEvents: ['screen_view', 'user_engagement', 'session_start', 'app_clear_data', 'app_update',
     'os_update', 'app_exception', 'firebase_campaign', 'notification_receive', 'notification_dismiss',
     '(not set)', ''],
+  // ...but these stay in a player's journey: "opened the game", "updated it".
+  journeyKeep: ['session_start', 'app_update'],
 
   // What each event means, shown next to its name. Unknown events show the bare name.
   events: {
@@ -134,6 +136,23 @@ window.GAME_PULSE = {
     daily_streak: 'Серия рейсов дня',
     share: 'Поделился результатом',
     unlock_achievement: 'Получил достижение',
+    session_start: 'Зашёл в игру',
+    game_ready: 'Игра загрузилась',
+    run_leave: 'Свернул игру посреди забега',
+    level_leave: 'Свернул игру посреди уровня',
+    ad_nofill_pause: 'Рекламы нет (no fill), пауза',
+    ad_apd: 'Реклама при запуске (APD)',
+    iap_setup: 'Магазин Play подключился',
+    mp_room: 'Вместе: комната (создал / зашёл / позвал)',
+    mp_lore: 'Вместе: нашёл записку',
+    mp_update: 'Вместе: просит обновить игру',
+    marathon_start: 'Начал марафон',
+    marathon_end: 'Марафон: время вышло',
+    speed_over: 'Гонка: время вышло',
+    town_open: 'Открылся Котоград',
+    day_streak: 'Серия дней',
+    day_streak_save: 'Спасение серии дней',
+    low_res: 'Графика сама понизилась (мало FPS)',
   },
 
   // Plain-words names for param values; a breakdown picks a set with `labels: '<set>'`.
@@ -238,9 +257,14 @@ window.GAME_PULSE = {
   //              view - 'bars' | 'split' | 'hist' (picked from the values when left out);
   //              hint - line under the title; short - column name in the store table.
   //              Events without the param (versions that didn't send it yet) are ignored.
+  //   journey  - the player journeys (optional; picked from level / outcome / breakdowns otherwise):
+  //              mode {event, dim, labels} - what counts as "started a mode / level";
+  //              step - up to 2 params read with every event; detail - up to 7 when one player is opened.
   games: {
     '558926253': { // cat-sort
       level: 'level', start: 'level_start', win: 'level_win', lose: 'level_lose', ordered: true,
+      journey: {mode: {event: 'level_start', dim: 'mode', labels: 'mode'}, step: ['mode', 'level'],
+                detail: ['mode', 'level', 'from', 'k', 'stars', 'id', 'kind']},
       cols: [{event: 'booster', t: 'Бустеры'}],
       avgs: [{event: 'level_win', metric: 'sec', t: 'Время победы', fmt: 'dur'}, {event: 'level_win', metric: 'moves', t: 'Ходов'}],
       // marathon_end carries level = the board the clock ran out on; shelves = the score
@@ -298,6 +322,7 @@ window.GAME_PULSE = {
     },
     '561653748': { // radionyanya (Baby Monitor)
       level: 'level_name', start: 'level_start', win: 'level_end', lose: 'level_end', outcome: 'success',
+      journey: {step: ['level_name', 'success'], detail: ['level_name', 'success', 'from', 'reason', 'anomaly', 'hour', 'answer']},
       cols: [{event: 'anomaly_found', t: 'Нашли аномалий'}, {event: 'anomaly_missed', t: 'Пропустили'}, {event: 'false_alarm', t: 'Ложные тревоги'},
              {event: 'kid_lost', t: 'Соня ушла'}, {event: 'battery_dead', t: 'Сел телефон'}, {event: 'night_quit', t: 'Бросили'},
              {event: 'night_continue', t: 'Продолжили'}, {event: 'ad_interstitial', t: 'Реклам'}],
@@ -322,6 +347,7 @@ window.GAME_PULSE = {
     },
     '559461409': { // lift-13
       levelLabels: 'lift',
+      journey: {step: ['level_name', 'success'], detail: ['level_name', 'success', 'from', 'floor', 'anomaly', 'result', 'gift']},
       level: 'level_name', start: 'level_start', win: 'level_end', lose: 'level_end', outcome: 'success',
       cols: [{event: 'anomaly_found', t: 'Нашли аномалий'}, {event: 'anomaly_missed', t: 'Пропустили'}, {event: 'false_alarm', t: 'Ложные тревоги'},
              {event: 'run_continue', t: 'Продолжили'}, {event: 'run_quit', t: 'Бросили'},

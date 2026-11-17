@@ -10,7 +10,24 @@ the signed-in account can read shows up as a tab.
   per player, uninstalls) against the previous period, players per day
   stacked by game, a summary table. Game names, order and colours come from
   `config.js > titles`.
-- "Сейчас в игре": Realtime API, last 30 minutes, refreshed every minute.
+- Every page has two sections: "Последние 30 минут" (Realtime API, refreshed
+  every minute) and "За период" (regular reports for the selected period).
+- Player journeys (`journey.js`), in both sections: one row per player - country,
+  city, phone (brand, model, Android) - and a time strip on an axis shared by
+  all rows: sessions as grey bars, steps as marks (ads above, play on the line,
+  purchases below, a red cross = removed the game; hover = what happened).
+  A click opens every step, split into sessions, with params
+  (mode, floor, anomaly, where the ad was...). The period section also has a
+  "what players did" funnel, search and sorting.
+  GA4 gives no player id, so a player is country + city + phone model +
+  Android version (in the last 30 minutes: city + game version - Realtime has no
+  phone model, it is looked up in the last 7 days of regular reports). Regular
+  reports lag 1-3 hours behind Realtime. Params shown per game: `config.js >
+  games > journey` (or picked from the level funnel and breakdowns).
+- Retention (`retention.js`): cohorts by day of first session for the last
+  35 days, share active again on day 1...28 - a curve, cards (day 1/7/14/28)
+  and a heat table by install week on a game tab; games side by side on
+  "Все игры". Independent of the selected period.
 - Today / yesterday / week / month: regular reports, refreshed every 5 minutes,
   each compared with the previous period of the same length.
 - "Прохождение уровней": per-level funnel for games listed in `config.js > games`
