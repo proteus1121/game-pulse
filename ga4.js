@@ -311,10 +311,10 @@
     const entries = await Promise.all(Object.entries(reports).map(async ([name, body]) => {
       try {
         for (let tries = 0; ; tries++) {
-          try { return [name, {rows: rows(await dataCall(prop, url, body)), dims: body.dimensions.map(d => d.name)}]; }
+          try { return [name, {rows: rows(await dataCall(prop, url, body)), dims: (body.dimensions || []).map(d => d.name)}]; }
           catch (e) {
             const bad = DROPPABLE.test(name) && tries < 6 && badDim(e.message);
-            if (!bad || !body.dimensions.some(d => d.name === bad)) throw e;
+            if (!bad || !(body.dimensions || []).some(d => d.name === bad)) throw e;
             body = dropDim(bad)(body);
           }
         }
