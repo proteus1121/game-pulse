@@ -82,6 +82,7 @@ window.GAME_PULSE = {
     mp_end: 'Вместе: матч закончился',
     mp_mic: 'Вместе: ответ на запрос микрофона',
     mp_limit: 'Вместе: бесплатная поездка на сегодня уже была',
+    run_fail: 'Ошибка в забеге: сняла нерв или отправила назад',
     full_show: 'Открыл экран полной версии',
     ad_load_fail: 'Реклама не загрузилась (ошибка, не no fill)',
     ad_consent_block: 'Реклама запрещена согласием (UMP)',
@@ -354,9 +355,12 @@ window.GAME_PULSE = {
              // together (mp.js, 2026-11-05): searches, matches started / finished
              {event: 'mp_search', t: 'Вместе: поиск'}, {event: 'mp_start', t: 'Вместе: матчи'}, {event: 'mp_end', t: 'Вместе: доиграли'},
              // 0.9.1: without the full version one ride together a day; mp_limit = hit it, full_show = the full version screen
+             // (0.10.3: the limit is gone, together is free; full_show from=stuck = after the 3rd mistake of a ride)
              {event: 'mp_limit', t: 'Вместе: упёрлись в лимит'}, {event: 'full_show', t: 'Экран полной версии'},
              // 0.9.7: ▼ on floor 1 no longer a false alarm
-             {event: 'floor1_down', t: '▼ на 1-м этаже'}],
+             {event: 'floor1_down', t: '▼ на 1-м этаже'},
+             // 0.10.3: every mistake of a solo ride (a heart taken or sent back)
+             {event: 'run_fail', t: 'Ошибки в забеге'}],
       avgs: [{event: 'level_end', metric: 'time', t: 'Время забега', fmt: 'dur'},
              {event: 'anomaly_found', metric: 'ms', t: 'Реакция на аномалию', fmt: 'ms'}],
       breakdowns: [
@@ -366,6 +370,7 @@ window.GAME_PULSE = {
         {event: 'gift_take', dim: 'gift', t: 'Подарки', col: 'Подарок', labels: 'gift'},
         {event: 'level_end', dim: 'floor', t: 'На каком этаже проигрывают', col: 'Этаж', hint: 'этаж, на котором забег кончился ошибкой'},
         {event: 'run_quit', dim: 'floor', t: 'На каком этаже бросают забег', col: 'Этаж'},
+        {event: 'run_fail', dim: 'floor', t: 'На каком этаже ошибаются (0.10.3)', col: 'Этаж'},
         {event: 'remove_ads_tap', dim: 'from', t: 'Откуда жмут «купить полную версию»', col: 'Откуда', labels: 'from'},
         {event: 'remove_ads_result', dim: 'code', t: 'Покупка «без рекламы»: ответ Play / Huawei', col: 'Ответ', labels: 'play'},
         {event: 'remove_ads_result', dim: 'step', t: 'Покупка «без рекламы»: где сорвалось', col: 'Шаг', labels: 'playStep'},
